@@ -1,0 +1,146 @@
+
+from rctclient.types import Command  # , FrameType
+from rctclient.utils import CRC16
+from rctclient.exceptions import FrameCRCMismatch, InvalidCommand  # , FrameLengthExceeded
+
+import logging
+import struct
+
+#: Token that starts a frame
+START_TOKEN = ord('+')
+#: Token that escapes the next value
+ESCAPE_TOKEN = ord('-')
+#: Length of the header
+FRAME_LENGTH_HEADER = 1
+#: Length of a command
+FRAME_LENGTH_COMMAND = 1
+#: Length of the length information
+FRAME_LENGTH_LENGTH = 2
+#: Length of a frame, contains 1 byte header, 1 byte command and 2 bytes length
+FRAME_HEADER_WITH_LENGTH = FRAME_LENGTH_HEADER + FRAME_LENGTH_COMMAND + FRAME_LENGTH_LENGTH
+#: Length of the CRC16 checkum
+FRAME_LENGTH_CRC16 = 2
+
+#: Amount of bytes we need to have a command
+BUFFER_LEN_COMMAND = 2
+log = logging.getLogger(__name__)
+
+
+class FrameParser:
+
+    def __init__(self, buffer: bytearray):
+        self.buffer = buffer
+        self.start = -1        # index of start token
+        self.frame_len = 0     # length of frame
+        self.complete = False  # true if complete frame is read
+        self._consumed_bytes = 0
+        self._escaping = False
+        self._command = Command._NONE
+        self._frame_length = 0
+        self._address: int = 0
+        self._id: int = 0
+        self._data = b''
+        self._crc16 = 0
+        self._crc_ok = False
+        self._ignore_crc_mismatch = False
+        # set initially to the minimum length a frame header (i.e. everything before the data) can be.
+        # 1 byte start, 1 byte command, 1 byte length, no address, 4 byte ID
+        self._frame_header_length = 1 + 1 + 1 + 0 + 4
+
+    def parse(self, length: int):
+        log.debug('Buffer: %s', self.buffer.hex(' '))
+
+        i = 0 if self.start < 0 else self.start
+        while i < length:
+            self._consumed_bytes += 1
+            c = self.buffer[i]
+            log.debug('read: 0x%x at index %d', c, i)
+
+            # sync to start_token
+            if self.start < 0:
+                if c == START_TOKEN:
+                    log.debug('      start token found')
+                    self.start = i
+                i += 1
+                continue
+
+            # we have the start token
+            if self._escaping:
+                log.debug('      resetting escape')
+                self._escaping = False
+            else:
+                if c == ESCAPE_TOKEN:
+                    log.debug('      setting escape')
+                    # set the escape mode and ignore the byte at hand.
+                    self._escaping = True
+                    i += 1
+                    continue
+
+            log.debug('      adding to buffer')
+
+            if length - i >= BUFFER_LEN_COMMAND and self._command == Command._NONE:
+                try:
+                    self._command = Command(c)
+                except ValueError as exc:
+                    raise InvalidCommand(str(exc), c, i) from exc
+
+                if self._command == Command.EXTENSION:
+                    raise InvalidCommand('EXTENSION is not supported', c, i)
+
+                log.debug('      have command: 0x%x, is_plant: %s', self._command,
+                                Command.is_plant(self._command))
+                if Command.is_plant(self._command):
+                    self._frame_header_length += 4
+                    log.debug('      plant frame, extending header length by 4 to %d',
+                        self._frame_header_length)
+                if Command.is_long(self._command):
+                    self._frame_header_length += 1
+                    log.debug('      long cmd, extending header length by 1 to %d',
+                                     self._frame_header_length)
+                i += 1
+            if length >= self.start + self._frame_header_length and self._frame_length == 0:
+                log.debug('      buffer length %d indicates that it contains entire header',
+                    i)
+                if Command.is_long(self._command):
+                    data_length = struct.unpack('>H', self.buffer[i:i + 2])[0]
+                    address_idx = 4
+                else:
+                    data_length = struct.unpack('>B', bytes([self.buffer[i]]))[0]
+                    address_idx = 3
+                log.debug('      found data_length: %d bytes', data_length)
+                if Command.is_plant(self._command):
+                    # length field includes address and id length == 8 bytes
+                    self._frame_length = (self._frame_header_length - 8) + data_length + FRAME_LENGTH_CRC16
+                    self._address = struct.unpack('>I', self.buffer[address_idx:address_idx + 4])[0]
+                    oid_idx = address_idx + 4
+                else:
+                    # length field includes id length == 4 bytes
+                    self._frame_length = (self._frame_header_length - 4) + data_length + FRAME_LENGTH_CRC16
+                    oid_idx = address_idx
+
+                log.debug('      data_length: %d bytes, frame_length: %d', data_length,
+                    self._frame_length)
+                self._id = struct.unpack('>I', self.buffer[oid_idx:oid_idx + 4])[0]
+                log.debug('      oid index: %d, OID: 0x%X', oid_idx, self._id)
+                i = oid_idx + 4
+            if self._frame_length > 0 and length >= self.start + self._frame_length:
+                log.debug('      buffer contains full frame')
+                log.debug('      buffer: %s', self.buffer.hex(' '))
+                self.complete = True
+                self._crc16 = struct.unpack('>H', self.buffer[-2:])[0]
+                calc_crc16 = CRC16(self.buffer[self.start + 1:-FRAME_LENGTH_CRC16])
+                self._crc_ok = self._crc16 == calc_crc16
+                log.debug('      crc: %04x calculated: %04x match: %s',
+                    self._crc16, calc_crc16, self._crc_ok)
+
+                self._data = self.buffer[self.start + self._frame_header_length:- FRAME_LENGTH_CRC16]
+
+                if not self._crc_ok and not self._ignore_crc_mismatch:
+                    raise FrameCRCMismatch('CRC mismatch', self._crc16, calc_crc16, i)
+                log.debug('returning completed frame at %d', self._frame_length)
+                i = self._frame_length + 1
+                return self._frame_length
+            else:
+                i += 1
+        log.debug('returning incomplete at %d', i)
+        return i
