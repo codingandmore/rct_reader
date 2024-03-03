@@ -34,51 +34,58 @@ class FrameParser:
         self.frame_len = 0     # length of frame
         self.complete = False  # true if complete frame is read
         self._consumed_bytes = 0
-        self._escaping = False
         self._command = Command._NONE
         self._frame_length = 0
-        self._address: int = 0
-        self._id: int = 0
-        self._data = b''
+        self.address: int = 0
+        self.id: int = 0
+        self.data = b''
         self._crc16 = 0
-        self._crc_ok = False
-        self._ignore_crc_mismatch = False
+        self.crc_ok = False
+        self.ignore_crc_mismatch = False
         # set initially to the minimum length a frame header (i.e. everything before the data) can be.
         # 1 byte start, 1 byte command, 1 byte length, no address, 4 byte ID
         self._frame_header_length = 1 + 1 + 1 + 0 + 4
 
-    def parse(self, length: int):
+    def _unescape_buffer(self):
+        esc_seq = b'-+'
+        new_buffer = self.buffer
+
+        pos = self.buffer.find(esc_seq)
+        if pos >= 0:
+            log.debug('Found escape sequence 1 at %d,', pos)
+            new_buffer = self.buffer.replace(esc_seq, b'+')
+        esc_seq = b'--'
+        pos = new_buffer.find(esc_seq)
+        if pos >= 0:
+            log.debug('Found escape sequence 2 at %d,', pos)
+            new_buffer = new_buffer.replace(esc_seq, b'-')
+        return new_buffer
+
+    def parse(self):
         log.debug('Buffer: %s', self.buffer.hex(' '))
 
+        unescaped_buffer = self._unescape_buffer()
+        length = len(unescaped_buffer)
         i = 0 if self.start < 0 else self.start
+
         while i < length:
             self._consumed_bytes += 1
-            c = self.buffer[i]
+            c = unescaped_buffer[i]
             log.debug('read: 0x%x at index %d', c, i)
 
             # sync to start_token
             if self.start < 0:
                 if c == START_TOKEN:
-                    log.debug('      start token found')
-                    self.start = i
+                    if i > 0 and unescaped_buffer[i - 1] == ESCAPE_TOKEN:
+                        log.debug('escaped start token found, ignoring')
+                    else:
+                        log.debug('start token found')
+                        self.start = i
                 i += 1
                 continue
 
-            # we have the start token
-            if self._escaping:
-                log.debug('      resetting escape')
-                self._escaping = False
-            else:
-                if c == ESCAPE_TOKEN:
-                    log.debug('      setting escape')
-                    # set the escape mode and ignore the byte at hand.
-                    self._escaping = True
-                    i += 1
-                    continue
-
-            log.debug('      adding to buffer')
-
-            if length - i >= BUFFER_LEN_COMMAND and self._command == Command._NONE:
+            if (length - i >= BUFFER_LEN_COMMAND and
+                    self._command == Command._NONE):  # pylint: disable=protected-access
                 try:
                     self._command = Command(c)
                 except ValueError as exc:
@@ -87,31 +94,31 @@ class FrameParser:
                 if self._command == Command.EXTENSION:
                     raise InvalidCommand('EXTENSION is not supported', c, i)
 
-                log.debug('      have command: 0x%x, is_plant: %s', self._command,
+                log.debug('have command: 0x%x, is_plant: %s', self._command,
                                 Command.is_plant(self._command))
                 if Command.is_plant(self._command):
                     self._frame_header_length += 4
-                    log.debug('      plant frame, extending header length by 4 to %d',
+                    log.debug('plant frame, extending header length by 4 to %d',
                         self._frame_header_length)
                 if Command.is_long(self._command):
                     self._frame_header_length += 1
-                    log.debug('      long cmd, extending header length by 1 to %d',
+                    log.debug('long cmd, extending header length by 1 to %d',
                                      self._frame_header_length)
                 i += 1
             if length >= self.start + self._frame_header_length and self._frame_length == 0:
-                log.debug('      buffer length %d indicates that it contains entire header',
+                log.debug('buffer length %d indicates that it contains entire header',
                     i)
                 if Command.is_long(self._command):
-                    data_length = struct.unpack('>H', self.buffer[i:i + 2])[0]
+                    data_length = struct.unpack('>H', unescaped_buffer[i:i + 2])[0]
                     address_idx = 4
                 else:
-                    data_length = struct.unpack('>B', bytes([self.buffer[i]]))[0]
+                    data_length = struct.unpack('>B', bytes([unescaped_buffer[i]]))[0]
                     address_idx = 3
-                log.debug('      found data_length: %d bytes', data_length)
+                log.debug('found data_length: %d bytes', data_length)
                 if Command.is_plant(self._command):
                     # length field includes address and id length == 8 bytes
                     self._frame_length = (self._frame_header_length - 8) + data_length + FRAME_LENGTH_CRC16
-                    self._address = struct.unpack('>I', self.buffer[address_idx:address_idx + 4])[0]
+                    self.address = struct.unpack('>I', unescaped_buffer[address_idx:address_idx + 4])[0]
                     oid_idx = address_idx + 4
                 else:
                     # length field includes id length == 4 bytes
@@ -120,22 +127,22 @@ class FrameParser:
 
                 log.debug('      data_length: %d bytes, frame_length: %d', data_length,
                     self._frame_length)
-                self._id = struct.unpack('>I', self.buffer[oid_idx:oid_idx + 4])[0]
-                log.debug('      oid index: %d, OID: 0x%X', oid_idx, self._id)
+                self.id = struct.unpack('>I', unescaped_buffer[oid_idx:oid_idx + 4])[0]
+                log.debug('oid index: %d, OID: 0x%X', oid_idx, self.id)
                 i = oid_idx + 4
             if self._frame_length > 0 and length >= self.start + self._frame_length:
-                log.debug('      buffer contains full frame')
-                log.debug('      buffer: %s', self.buffer.hex(' '))
+                log.debug('buffer contains full frame')
+                log.debug('buffer: %s', unescaped_buffer.hex(' '))
                 self.complete = True
-                self._crc16 = struct.unpack('>H', self.buffer[-2:])[0]
-                calc_crc16 = CRC16(self.buffer[self.start + 1:-FRAME_LENGTH_CRC16])
-                self._crc_ok = self._crc16 == calc_crc16
-                log.debug('      crc: %04x calculated: %04x match: %s',
-                    self._crc16, calc_crc16, self._crc_ok)
+                self._crc16 = struct.unpack('>H', unescaped_buffer[-2:])[0]
+                calc_crc16 = CRC16(unescaped_buffer[self.start + 1:-FRAME_LENGTH_CRC16])
+                self.crc_ok = self._crc16 == calc_crc16
+                log.debug('crc: %04x calculated: %04x match: %s',
+                    self._crc16, calc_crc16, self.crc_ok)
 
-                self._data = self.buffer[self.start + self._frame_header_length:- FRAME_LENGTH_CRC16]
+                self.data = unescaped_buffer[self.start + self._frame_header_length:- FRAME_LENGTH_CRC16]
 
-                if not self._crc_ok and not self._ignore_crc_mismatch:
+                if not self.crc_ok and not self.ignore_crc_mismatch:
                     raise FrameCRCMismatch('CRC mismatch', self._crc16, calc_crc16, i)
                 log.debug('returning completed frame at %d', self._frame_length)
                 i = self._frame_length + 1
@@ -143,4 +150,3 @@ class FrameParser:
             else:
                 i += 1
         log.debug('returning incomplete at %d', i)
-        return i
