@@ -71,6 +71,14 @@ def test_parser_leading_bytes_with_escaped_start_token():
     check_int_response(frame, test_frame)
 
 
+def test_parser_garbage_data():
+    test_frame = bytes.fromhex('00 00 FF FF 01')
+    parser = rct_parser.FrameParser(test_frame)
+    parser.parse()
+    assert not parser.complete
+    assert not parser.data
+
+
 def test_parser_incomplete_frame():
     frame = Frame()
     buffer = frame.make_frame()
@@ -91,8 +99,25 @@ def test_parser_incomplete_frame():
     assert value == frame.value
 
 
+def test_parser_two_frames():
+    frame = Frame()
+    buffer = frame.make_frame()
+    dbl_buffer = buffer + buffer
+    parser = rct_parser.FrameParser(dbl_buffer)
+    parser.parse()
+    assert parser.complete
+    assert parser.crc_ok
+    value = decode_value(frame.dataType, parser.data)
+    assert value == frame.value
+    # now parse again to get the second frame
+    parser.parse()
+    assert parser.complete
+    assert parser.crc_ok
+    value = decode_value(frame.dataType, parser.data)
+    assert value == frame.value
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    test_parser_two_frames()
+    #  test_parser_incomplete_frame()
+    test_parser_garbage_data()

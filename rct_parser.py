@@ -98,79 +98,84 @@ class FrameParser:
                     self.start = i
             i += 1
 
+        if self.start < 0:  # no start token found, exit
+            log.debug('no start token invalid data received len:%d ', length)
+            self.current_pos = length  # we do not scan garbage data next time
+            return
+
         unescaped_buffer = self._unescape_buffer()
         unescaped_buffer = memoryview(unescaped_buffer)[self.start:]
         length = len(unescaped_buffer)
         i = 1  # index 0 is now start token
         log.debug('unescaped length: %d', length)
 
-        while i < length:
-            c = unescaped_buffer[i]
-            log.debug('read: 0x%x at index %d', c, i)
+        c = unescaped_buffer[i]
+        log.debug('read: 0x%x at index %d', c, i)
 
-            if (length - i >= BUFFER_LEN_COMMAND and
-                    self.command == Command._NONE):  # pylint: disable=protected-access
-                try:
-                    self.command = Command(c)
-                except ValueError as exc:
-                    raise InvalidCommand(str(exc), c, i) from exc
+        if (length - i >= BUFFER_LEN_COMMAND and
+                self.command == Command._NONE):  # pylint: disable=protected-access
+            try:
+                self.command = Command(c)
+            except ValueError as exc:
+                raise InvalidCommand(str(exc), c, i) from exc
 
-                if self.command == Command.EXTENSION:
-                    raise InvalidCommand('EXTENSION is not supported', c, i)
+            if self.command == Command.EXTENSION:
+                raise InvalidCommand('EXTENSION is not supported', c, i)
 
-                log.debug('have command: 0x%x, is_plant: %s', self.command,
-                                Command.is_plant(self.command))
-                if Command.is_plant(self.command):
-                    self._frame_header_length += 4
-                    log.debug('plant frame, extending header length by 4 to %d',
-                        self._frame_header_length)
-                if Command.is_long(self.command):
-                    self._frame_header_length += 1
-                    log.debug('long cmd, extending header length by 1 to %d',
-                                     self._frame_header_length)
-                i += 1
-            if length >= self._frame_header_length and self._frame_length == 0:
-                log.debug('buffer length %d indicates that it contains entire header',
-                    i)
-                if Command.is_long(self.command):
-                    data_length = struct.unpack('>H', unescaped_buffer[i:i + 2])[0]
-                    address_idx = 4
-                else:
-                    data_length = struct.unpack('>B', bytes([unescaped_buffer[i]]))[0]
-                    address_idx = 3
-                log.debug('found data_length: %d bytes', data_length)
-                if Command.is_plant(self.command):
-                    # length field includes address and id length == 8 bytes
-                    self._frame_length = (self._frame_header_length - 8) + data_length + FRAME_LENGTH_CRC16
-                    self.address = struct.unpack('>I', unescaped_buffer[address_idx:address_idx + 4])[0]
-                    oid_idx = address_idx + 4
-                else:
-                    # length field includes id length == 4 bytes
-                    self._frame_length = (self._frame_header_length - 4) + data_length + FRAME_LENGTH_CRC16
-                    oid_idx = address_idx
-
-                log.debug('      data_length: %d bytes, frame_length: %d', data_length,
-                    self._frame_length)
-                self.id = struct.unpack('>I', unescaped_buffer[oid_idx:oid_idx + 4])[0]
-                log.debug('oid index: %d, OID: 0x%X', oid_idx, self.id)
-                i = oid_idx + 4
-            if self._frame_length > 0 and length >= self._frame_length:
-                log.debug('buffer contains full frame')
-                log.debug('buffer: %s', unescaped_buffer.hex(' '))
-                self.complete = True
-                self._crc16 = struct.unpack('>H', unescaped_buffer[-2:])[0]
-                calc_crc16 = CRC16(unescaped_buffer[1:-FRAME_LENGTH_CRC16])
-                self.crc_ok = self._crc16 == calc_crc16
-                log.debug('crc: %04x calculated: %04x match: %s',
-                    self._crc16, calc_crc16, self.crc_ok)
-
-                self.data = unescaped_buffer[self._frame_header_length:- FRAME_LENGTH_CRC16]
-
-                if not self.crc_ok and not self.ignore_crc_mismatch:
-                    raise FrameCRCMismatch('CRC mismatch', self._crc16, calc_crc16, i)
-                log.debug('returning completed frame at %d', self._frame_length)
-                self.current_pos = i + 1
-                return
+            log.debug('have command: 0x%x, is_plant: %s', self.command,
+                            Command.is_plant(self.command))
+            if Command.is_plant(self.command):
+                self._frame_header_length += 4
+                log.debug('plant frame, extending header length by 4 to %d',
+                    self._frame_header_length)
+            if Command.is_long(self.command):
+                self._frame_header_length += 1
+                log.debug('long cmd, extending header length by 1 to %d',
+                                    self._frame_header_length)
+            i += 1
+        if length >= self._frame_header_length and self._frame_length == 0:
+            log.debug('buffer length %d indicates that it contains entire header',
+                i)
+            if Command.is_long(self.command):
+                data_length = struct.unpack('>H', unescaped_buffer[i:i + 2])[0]
+                address_idx = 4
             else:
-                i += 1
-        log.debug('returning incomplete at %d', i)
+                data_length = struct.unpack('>B', bytes([unescaped_buffer[i]]))[0]
+                address_idx = 3
+            log.debug('found data_length: %d bytes', data_length)
+            if Command.is_plant(self.command):
+                # length field includes address and id length == 8 bytes
+                self._frame_length = (self._frame_header_length - 8) + data_length + FRAME_LENGTH_CRC16
+                self.address = struct.unpack('>I', unescaped_buffer[address_idx:address_idx + 4])[0]
+                oid_idx = address_idx + 4
+            else:
+                # length field includes id length == 4 bytes
+                self._frame_length = (self._frame_header_length - 4) + data_length + FRAME_LENGTH_CRC16
+                oid_idx = address_idx
+
+            log.debug('data_length: %d bytes, frame_length: %d', data_length,
+                self._frame_length)
+            self.id = struct.unpack('>I', unescaped_buffer[oid_idx:oid_idx + 4])[0]
+            log.debug('oid index: %d, OID: 0x%X', oid_idx, self.id)
+            i = oid_idx + 4
+            log.debug('i is: %d', i)
+        if self._frame_length > 0 and length >= self._frame_length:
+            data_length -= 4  # includes length of oid
+            log.debug('buffer contains full frame, index: %d', i)
+            self.data = unescaped_buffer[i : i + data_length]
+            self.complete = True
+            i += data_length
+            log.debug('crc i is: %d', i)
+            self._crc16 = struct.unpack('>H', unescaped_buffer[i:i + 2])[0]
+            calc_crc16 = CRC16(unescaped_buffer[1:i])
+            self.crc_ok = self._crc16 == calc_crc16
+            log.debug('crc: %04x calculated: %04x match: %s',
+                self._crc16, calc_crc16, self.crc_ok)
+
+            if not self.crc_ok and not self.ignore_crc_mismatch:
+                raise FrameCRCMismatch('CRC mismatch', self._crc16, calc_crc16, i)
+            log.debug('returning completed frame at %d', self._frame_length)
+            self.current_pos = i + 2
+        else:
+            log.debug('frame is incomplete, stopping at %d', i)
+            self._reset()
