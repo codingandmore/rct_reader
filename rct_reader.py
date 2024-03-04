@@ -32,8 +32,8 @@ def read_frame(sock: socket.socket, oid_name):
     print(f'read bytes from socket: {bytes_read}')
     mv = memoryview(buffer)[start:bytes_read]
     parser = rct_parser.FrameParser(mv)
-    consumed = parser.parse()
-    print(f'Consumed bytes: {consumed}, complete: {parser.complete}')
+    parser.parse()
+    print(f'Parser complete: {parser.complete}')
     if parser.complete:
         print(f'Command received: {parser.command}, crc ok: {parser.crc_ok}')
         value = decode_value(oid.response_data_type, parser.data)
