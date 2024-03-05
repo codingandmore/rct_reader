@@ -148,10 +148,12 @@ class FrameParser:
                 self._frame_length = (self._frame_header_length - 8) + data_length + FRAME_LENGTH_CRC16
                 self.address = struct.unpack('>I', unescaped_buffer[address_idx:address_idx + 4])[0]
                 oid_idx = address_idx + 4
+                data_length -= 8  # includes length of oid and plant-id
             else:
                 # length field includes id length == 4 bytes
                 self._frame_length = (self._frame_header_length - 4) + data_length + FRAME_LENGTH_CRC16
                 oid_idx = address_idx
+                data_length -= 4  # includes length of oid
 
             log.debug('data_length: %d bytes, frame_length: %d', data_length,
                 self._frame_length)
@@ -160,9 +162,8 @@ class FrameParser:
             i = oid_idx + 4
             log.debug('i is: %d', i)
         if self._frame_length > 0 and length >= self._frame_length:
-            data_length -= 4  # includes length of oid
             log.debug('buffer contains full frame, index: %d', i)
-            self.data = unescaped_buffer[i : i + data_length]
+            self.data = unescaped_buffer[i:i + data_length]
             self.complete = True
             i += data_length
             log.debug('crc i is: %d', i)

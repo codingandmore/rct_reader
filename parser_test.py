@@ -4,6 +4,17 @@ import rctclient.frame
 from rctclient.types import Command, FrameType, DataType
 from rctclient.utils import decode_value, encode_value
 
+LOREM = '''Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed
+    diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
+    erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et
+    ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem
+    ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing
+    elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna
+    aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo
+    dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus
+    est Lorem ipsum dolor sit amet.
+'''
+
 
 class Frame:
     def __init__(
@@ -28,7 +39,7 @@ class Frame:
             self.frame_type)
 
 
-def check_int_response(frame: Frame, frame_bytes: bytes = None):
+def check_response(frame: Frame, frame_bytes: bytes = None) -> rct_parser.FrameParser:
     if frame_bytes:
         frame_buffer = frame_bytes
     else:
@@ -40,35 +51,36 @@ def check_int_response(frame: Frame, frame_bytes: bytes = None):
     assert parser.id == frame.frame_id
     value = decode_value(frame.dataType, parser.data)
     assert value == frame.value
+    return parser
 
 
 def test_parser_simple():
     frame = Frame()
-    check_int_response(frame)
+    check_response(frame)
 
 
 def test_parser_escaped_int():
     intValue = 0x2B000102
     frame = Frame(value=intValue)
-    check_int_response(frame)
+    check_response(frame)
     intValue = 0x2D000102
     frame = Frame(value=intValue)
-    check_int_response(frame)
+    check_response(frame)
     intValue = 0x2D00012B
     frame = Frame(value=intValue)
-    check_int_response(frame)
+    check_response(frame)
 
 
 def test_parser_leading_bytes():
     frame = Frame()
     test_frame = bytes.fromhex('00 00 00 00') + frame.make_frame()
-    check_int_response(frame, test_frame)
+    check_response(frame, test_frame)
 
 
 def test_parser_leading_bytes_with_escaped_start_token():
     frame = Frame()
     test_frame = bytes.fromhex('00 2D 2B 00') + frame.make_frame()
-    check_int_response(frame, test_frame)
+    check_response(frame, test_frame)
 
 
 def test_parser_garbage_data():
@@ -90,8 +102,9 @@ def test_parser_incomplete_frame():
     parser.parse()
     # should succeed but be inclompete now
     assert not parser.complete
-    # now parse complete frame
+    # assume another socket read call receiving the remaining bytes
     buffer1 += buffer2
+    # now parse complete frame
     parser.parse()
     assert parser.complete
     assert parser.crc_ok
@@ -117,7 +130,68 @@ def test_parser_two_frames():
     assert value == frame.value
 
 
+def test_parser_plant_message():
+    frame = Frame(
+        command=Command.PLANT_RESPONSE,
+        dataType=DataType.INT32,
+        value=1234,
+        frame_type=FrameType.PLANT,
+        address=4711,
+    )
+    parser = check_response(frame)
+    assert parser.address == frame.address
+
+
+def test_parser_string_message():
+    frame = Frame(
+        command=Command.RESPONSE,
+        dataType=DataType.STRING,
+        value="Lorem ipsum dolor sit amet.",
+        frame_type=FrameType.STANDARD,
+    )
+    parser = check_response(frame)
+    assert parser.address == frame.address
+
+
+def test_parser_float_message():
+    f_val = 123456E-12
+    # avoid rounding errors from double to float precision
+    f_bytes = encode_value(DataType.FLOAT, f_val)
+    f_val = decode_value(DataType.FLOAT, f_bytes)
+    frame = Frame(
+        command=Command.RESPONSE,
+        dataType=DataType.FLOAT,
+        value=f_val,
+        frame_type=FrameType.STANDARD,
+    )
+    parser = check_response(frame)
+    assert parser.address == frame.address
+
+
+def test_long_frame():
+    frame = Frame(
+        command=Command.LONG_RESPONSE,
+        dataType=DataType.STRING,
+        value=LOREM,
+        frame_type=FrameType.STANDARD,
+    )
+    parser = check_response(frame)
+    assert parser.address == frame.address
+
+
+def test_long_frame_plant():
+    frame = Frame(
+        command=Command.PLANT_LONG_RESPONSE,
+        dataType=DataType.STRING,
+        value=LOREM,
+        frame_type=FrameType.PLANT,
+        address=4711,
+    )
+    parser = check_response(frame)
+    assert parser.address == frame.address
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     #  test_parser_incomplete_frame()
-    test_parser_garbage_data()
+    test_parser_float_message()
