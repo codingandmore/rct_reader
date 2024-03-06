@@ -61,20 +61,29 @@ class RctReader:
         # construct a byte stream that will send a read command for the object ID we want, and send it
         send_frame = make_frame(command=Command.READ, id=oid.object_id)
         self.sock.sendall(send_frame)
-        pos = 0
 
         self.parser.reset()
         while not self.parser.complete:
+            pos = self.parser.current_pos
             socket_buffer_view = memoryview(self.buffer)[pos:len(self.buffer) - pos]
             bytes_read = self.sock.recv_into(socket_buffer_view, len(socket_buffer_view))
             print(f'read bytes from socket: {bytes_read}')
             mv = memoryview(self.buffer)[self.start:bytes_read]
-            pos = self.parser.parse(mv)
+            self.parser.parse(mv)
             print(f'Parser complete: {self.parser.complete}')
 
         print(f'Command received: {self.parser.command}, crc ok: {self.parser.crc_ok}')
         value = decode_value(oid.response_data_type, self.parser.data)
         print(f'Value: {value}, type: {oid.response_data_type}')
+
+        # rewind buffer
+        remaining_len = pos + bytes_read - self.parser.current_pos
+        if remaining_len > 0:
+            self.buffer[0:remaining_len] = self.buffer[self.parser.current_pos:self.parser.current_pos + remaining_len]
+
+        pos = 0
+        self.parser.rewinded()
+
         return value
 
 
