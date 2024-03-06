@@ -61,12 +61,12 @@ def test_parser_simple():
 
 
 def test_parser_escaped_int():
-    # intValue = 0x2B000102
-    # frame = Frame(value=intValue)
-    # check_response(frame)
-    # intValue = 0x2D000102
-    # frame = Frame(value=intValue)
-    # check_response(frame)
+    intValue = 0x2B000102
+    frame = Frame(value=intValue)
+    check_response(frame)
+    intValue = 0x2D000102
+    frame = Frame(value=intValue)
+    check_response(frame)
     intValue = 0x2D00012B
     frame = Frame(value=intValue)
     check_response(frame)
@@ -210,7 +210,7 @@ def test_buffer_rewind():
     remaining_len = org_len - current_pos
     dbl_buffer[0:remaining_len] = dbl_buffer[current_pos:org_len]
     assert len(dbl_buffer) == org_len
-    parser.current_pos = 0
+    parser.rewinded()
     parser.parse(dbl_buffer)
     assert parser.complete
     assert parser.crc_ok
@@ -218,7 +218,33 @@ def test_buffer_rewind():
     assert value == frame2.value
 
 
+def test_parser_incomplete_second_frame():
+    intValue = 0x2B000102  # escaped number
+    frame1 = Frame(value=intValue)
+    buffer1 = frame1.make_frame()
+    frame2 = Frame(value=789)
+    buffer2 = frame2.make_frame()
+    mid = int(len(buffer2) / 2)
+    buffer_total = buffer1 + buffer2
+    parser = rct_parser.FrameParser()
+    parser.parse(memoryview(buffer_total)[0:len(buffer1) + mid])
+    assert parser.complete
+    assert parser.crc_ok
+    value = decode_value(frame1.dataType, parser.data)
+    assert value == frame1.value
+    assert parser.current_pos < len(buffer1) + mid
+
+    # assume another socket read call receiving the remaining bytes
+    mv = memoryview(buffer_total)
+    # now parse complete frame
+    parser.parse(mv)
+    assert parser.complete
+    assert parser.crc_ok
+    value = decode_value(frame2.dataType, parser.data)
+    assert value == frame2.value
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     #  test_parser_incomplete_frame()
-    test_parser_escaped_int()
+    test_parser_incomplete_second_frame()

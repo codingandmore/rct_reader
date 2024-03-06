@@ -54,9 +54,13 @@ class FrameParser:
         self.address: int = 0
         self.id: int = 0
         self.data = b''
+        self.start = -1
         self._frame_length = 0
         self._crc16 = 0
         self.crc_ok = False
+
+    def rewinded(self):
+        self.current_pos = 0
 
     def _find_byte_tuple(self, data: bytes, byte_pair: bytes):
         pos = 0
@@ -84,7 +88,7 @@ class FrameParser:
 
     def parse(self, buffer: memoryview) -> int:
         log.debug('Buffer length: %d: %s', len(buffer), buffer.hex(' '))
-
+        log.debug('current pos: %d', self.current_pos)
         # start token not yet found, find it
         i = self.current_pos
         length = len(buffer)
@@ -108,7 +112,7 @@ class FrameParser:
         if self.start < 0:  # no start token found, exit
             log.debug('no start token invalid data received len:%d ', length)
             self.current_pos = length  # we do not scan garbage data next time
-            return
+            return length
 
         unescaped_buffer = memoryview(buffer)[self.start:]
         unescaped_buffer = self._unescape_buffer(unescaped_buffer)
