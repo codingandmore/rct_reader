@@ -16,28 +16,66 @@ import logging
 import rct_parser
 
 
-def read_frame(sock: socket.socket, oid_name):
+# Links and hints:
+# battery.soc
+# g_sync.p_acc_lp           Battery Power (neg for discharge)  Watts
+# g_sync.p_ac_load_sum_lp   Load Household (external power)    Watts
+#   -> auch noch für L1,L2,L3          g_sync.p_ac_load[0] [1], [2]
+# g_sync.p_ac_grid_sum_lp    Total grid power (see Power grid)
+# inv_struct.cosinus_phi cos φ
+#
+# https://stackoverflow.com/questions/22827794/reusing-python-bytearray-memoryview
+# ctypes.memmove(ctypes.addressof(self), bytes, fit)
+# copy bytearray: buffer1[:] = buffer2
+# Documentation: https://rctclient.readthedocs.io/
 
-    # query information about an object ID (here: battery.soc):
-    oid = R.get_by_name(oid_name)
+class RctReader:
+    def __init__(self, host: str, port: str):
+        self.buffer = bytearray(2048)
+        self.start = 0
+        self.host = host
+        self.port = port
+        self.parser = rct_parser.FrameParser()
+        self.sock = None
 
-    # construct a byte stream that will send a read command for the object ID we want, and send it
-    send_frame = make_frame(command=Command.READ, id=oid.object_id)
-    sock.sendall(send_frame)
+    def __enter__(self):
+        # open the socket and connect to the remote device:
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((self.host, self.port))
+        return self
 
-    buffer = bytearray(2048)
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.sock.close()
+        return False
 
-    start = 0
-    bytes_read = sock.recv_into(buffer, len(buffer))
-    print(f'read bytes from socket: {bytes_read}')
-    mv = memoryview(buffer)[start:bytes_read]
-    parser = rct_parser.FrameParser(mv)
-    parser.parse()
-    print(f'Parser complete: {parser.complete}')
-    if parser.complete:
-        print(f'Command received: {parser.command}, crc ok: {parser.crc_ok}')
-        value = decode_value(oid.response_data_type, parser.data)
+    def read_frames(self, oids: list[str]):
+        result = []
+        for oid in oids:
+            result.append(self.read_frame(oid))
+        return result
+
+    def read_frame(self, oid_name) -> any:
+        # query information about an object ID (here: battery.soc):
+        oid = R.get_by_name(oid_name)
+
+        # construct a byte stream that will send a read command for the object ID we want, and send it
+        send_frame = make_frame(command=Command.READ, id=oid.object_id)
+        self.sock.sendall(send_frame)
+        pos = 0
+
+        self.parser.reset()
+        while not self.parser.complete:
+            socket_buffer_view = memoryview(self.buffer)[pos:len(self.buffer) - pos]
+            bytes_read = self.sock.recv_into(socket_buffer_view, len(socket_buffer_view))
+            print(f'read bytes from socket: {bytes_read}')
+            mv = memoryview(self.buffer)[self.start:bytes_read]
+            pos = self.parser.parse(mv)
+            print(f'Parser complete: {self.parser.complete}')
+
+        print(f'Command received: {self.parser.command}, crc ok: {self.parser.crc_ok}')
+        value = decode_value(oid.response_data_type, self.parser.data)
         print(f'Value: {value}, type: {oid.response_data_type}')
+        return value
 
 
 def main():
@@ -47,19 +85,20 @@ def main():
         description='Read data from RCT inverter',
     )
     parser.add_argument('--host', help='host-name or IP of device', required=True)
-    parser.add_argument('--name', help='OID name from registry', required=False)
+    parser.add_argument('--port', default=8899, help='Port to connect to, default 8899',
+              metavar='<port>')
+    # parser.add_argument('--name', help='OID name from registry', required=False)
 
     parsed = parser.parse_args()
 
-    # open the socket and connect to the remote device:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((parsed.host, 8899))
+    with RctReader('localhost', parsed.port) as reader:
+        # read_frame(parsed.host, parsed.name)
+        oids = {'g_sync.p_acc_lp', 'g_sync.p_ac_load_sum_lp', 'g_sync.p_ac_grid_sum_lp', 'battery.soc',
+                'inv_struct.cosinus_phi'}
+        values = reader.read_frames(oids)
 
-    # read_frame(parsed.host, parsed.name)
-    oids = {'g_sync.p_acc_lp', 'g_sync.p_ac_load_sum_lp', 'g_sync.p_ac_grid_sum_lp', 'battery.soc',
-            'inv_struct.cosinus_phi'}
-    for oid in oids:
-        read_frame(sock, oid)
+    for val in values:
+        print(f' Received value {val} of type {type(val)}')
 
 
 if __name__ == '__main__':

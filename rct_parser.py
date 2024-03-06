@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 class FrameParser:
 
-    def __init__(self, buffer: bytearray, ignore_crc: bool = False):
+    def __init__(self, ignore_crc: bool = False):
         self.frame_len: int
         self.complete: bool  # true if complete frame is read
         self.command: Command
@@ -39,16 +39,15 @@ class FrameParser:
         self._crc16: int
         self.crc_ok: bool
         self.ignore_crc_mismatch: bool = ignore_crc
-        self.buffer = buffer
         self.start: int = -1        # index of start token
         self.current_pos: int = 0   # index where to start parsing next frame
         # set initially to the minimum length a frame header (i.e. everything before the data) can be.
         # 1 byte start, 1 byte command, 1 byte length, no address, 4 byte ID
         self._frame_header_length: int = 1 + 1 + 1 + 0 + 4
 
-        self._reset()  # init all variables
+        self.reset()  # init all variables
 
-    def _reset(self):
+    def reset(self):
         self.frame_len = 0
         self.complete = False
         self.command = Command._NONE  # pylint: disable=protected-access
@@ -58,40 +57,48 @@ class FrameParser:
         self._frame_length = 0
         self._crc16 = 0
         self.crc_ok = False
-        self.ignore_crc_mismatch = False
 
-    def _unescape_buffer(self):
+    def _find_byte_tuple(self, data: bytes, byte_pair: bytes):
+        pos = 0
+        for pos in range(len(data) - 1):
+            if data[pos] == byte_pair[0] and data[pos + 1] == byte_pair[1]:
+                return pos
+        return -1
+
+    def _unescape_buffer(self, buffer: memoryview) -> memoryview:
         esc_seq = b'-+'
-        new_buffer = self.buffer
+        new_buffer = buffer
 
-        pos = self.buffer.find(esc_seq, self.start)
+        pos = self._find_byte_tuple(buffer, esc_seq)
         if pos >= 0:
             log.debug('Found escape sequence 1 at %d,', pos)
-            new_buffer = self.buffer.replace(esc_seq, b'+')
+            new_buffer = buffer.tobytes().replace(esc_seq, b'+')
+            new_buffer = memoryview(new_buffer)
         esc_seq = b'--'
-        pos = new_buffer.find(esc_seq, self.start)
+        pos = self._find_byte_tuple(new_buffer, esc_seq)
         if pos >= 0:
             log.debug('Found escape sequence 2 at %d,', pos)
-            new_buffer = new_buffer.replace(esc_seq, b'-')
+            new_buffer = new_buffer.tobytes().replace(esc_seq, b'-')
+            new_buffer = memoryview(new_buffer)
         return new_buffer
 
-    def parse(self):
-        log.debug('Buffer length: %d: %s', len(self.buffer), self.buffer.hex(' '))
+    def parse(self, buffer: memoryview) -> int:
+        log.debug('Buffer length: %d: %s', len(buffer), buffer.hex(' '))
 
         # start token not yet found, find it
         i = self.current_pos
-        length = len(self.buffer)
+        length = len(buffer)
 
         if self.complete and self.current_pos < length:
             log.debug("trying to find next frame")
-            self._reset()
+            self.reset()
 
         while self.start < 0 and i < length:
-            c = self.buffer[i]
+            c = buffer[i]
             log.debug('read: 0x%x at index %d', c, i)
             # sync to start_token
             if c == START_TOKEN:
-                if i > 0 and self.buffer[i - 1] == ESCAPE_TOKEN:
+                if i > 0 and buffer[i - 1] == ESCAPE_TOKEN:
                     log.debug('escaped start token found, ignoring')
                 else:
                     log.debug('start token found')
@@ -103,8 +110,10 @@ class FrameParser:
             self.current_pos = length  # we do not scan garbage data next time
             return
 
-        unescaped_buffer = self._unescape_buffer()
-        unescaped_buffer = memoryview(unescaped_buffer)[self.start:]
+        unescaped_buffer = memoryview(buffer)[self.start:]
+        unescaped_buffer = self._unescape_buffer(unescaped_buffer)
+        log.debug('Escaped buffer length: %d: %s', len(unescaped_buffer), unescaped_buffer.hex(' '))
+
         length = len(unescaped_buffer)
         i = 1  # index 0 is now start token
         log.debug('unescaped length: %d', length)
@@ -179,4 +188,5 @@ class FrameParser:
             self.current_pos = i + 2
         else:
             log.debug('frame is incomplete, stopping at %d', i)
-            self._reset()
+            self.reset()
+        return self.current_pos
