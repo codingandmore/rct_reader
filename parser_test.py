@@ -233,6 +233,8 @@ def test_parser_incomplete_second_frame():
     value = decode_value(frame1.dataType, parser.data)
     assert value == frame1.value
     assert parser.current_pos < len(buffer1) + mid
+    assert buffer_total[parser.current_pos] == ord(b'+')
+    assert parser.current_pos == 14
 
     # assume another socket read call receiving the remaining bytes
     mv = memoryview(buffer_total)

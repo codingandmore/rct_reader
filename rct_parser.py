@@ -44,6 +44,7 @@ class FrameParser:
         # set initially to the minimum length a frame header (i.e. everything before the data) can be.
         # 1 byte start, 1 byte command, 1 byte length, no address, 4 byte ID
         self._frame_header_length: int = 1 + 1 + 1 + 0 + 4
+        self.escape_indexes = []
 
         self.reset()  # init all variables
 
@@ -58,6 +59,7 @@ class FrameParser:
         self._frame_length = 0
         self._crc16 = 0
         self.crc_ok = False
+        self.escape_indexes = []
 
     def rewinded(self):
         self.current_pos = 0
@@ -69,7 +71,7 @@ class FrameParser:
                 return pos
         return -1
 
-    def _unescape_buffer(self, buffer: memoryview) -> memoryview:
+    def _unescape_buffer_old(self, buffer: memoryview) -> memoryview:
         esc_seq = b'-+'
         new_buffer = buffer
 
@@ -84,6 +86,24 @@ class FrameParser:
             log.debug('Found escape sequence 2 at %d,', pos)
             new_buffer = new_buffer.tobytes().replace(esc_seq, b'-')
             new_buffer = memoryview(new_buffer)
+        return new_buffer
+
+    def _find_escaped_byte(self, data: bytes):
+        pos = 0
+        for pos in range(len(data) - 1):
+            if data[pos] == ord(b'-') and (data[pos + 1] == ord(b'+') or data[pos + 1] == ord(b'-')):
+                return pos
+        return -1
+
+    def _unescape_buffer(self, buffer: memoryview) -> memoryview:
+        new_buffer = buffer
+
+        while (pos := self._find_escaped_byte(new_buffer)) >= 0:
+            log.debug('Found escape sequence at %d,', pos)
+            new_buffer = new_buffer.tobytes()
+            new_buffer = new_buffer[0:pos] + new_buffer[pos + 1:]
+            new_buffer = memoryview(new_buffer)
+            self.escape_indexes.append(pos)
         return new_buffer
 
     def parse(self, buffer: memoryview) -> int:
@@ -193,4 +213,8 @@ class FrameParser:
         else:
             log.debug('frame is incomplete, stopping at %d', i)
             self.reset()
+
+        for escape_index in self.escape_indexes:
+            if self.current_pos >= escape_index:
+                self.current_pos += 1
         return self.current_pos

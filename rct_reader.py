@@ -79,7 +79,8 @@ class RctReader:
         # rewind buffer
         remaining_len = pos + bytes_read - self.parser.current_pos
         if remaining_len > 0:
-            self.buffer[0:remaining_len] = self.buffer[self.parser.current_pos:self.parser.current_pos + remaining_len]
+            self.buffer[0:remaining_len] = self.buffer[self.parser.current_pos:
+                                                       self.parser.current_pos + remaining_len]
 
         pos = 0
         self.parser.rewinded()
