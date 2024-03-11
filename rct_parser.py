@@ -1,5 +1,6 @@
 
-from rctclient.types import Command  # , FrameType
+from typing import Tuple
+from rctclient.types import Command, FrameType
 from rctclient.utils import CRC16
 from rctclient.exceptions import FrameCRCMismatch, InvalidCommand  # , FrameLengthExceeded
 
@@ -26,8 +27,28 @@ BUFFER_LEN_COMMAND = 2
 log = logging.getLogger(__name__)
 
 
-class FrameParser:
+class ResponseFrame:
+    def __init__(self,
+            command: Command,
+            oid: int,
+            crc16: bool,
+            crc_ok: bool,
+            address: int,
+            frame_length: int,
+            frame_type: FrameType,
+            payload: bytes,
+    ):
+        self.command = command
+        self.oid = oid
+        self.crc16 = crc16
+        self.crc_ok = crc_ok
+        self.address = address
+        self.frame_length = frame_length
+        self.frame_type = frame_type
+        self.payload = payload
 
+
+class FrameParser:
     def __init__(self, ignore_crc: bool = False):
         self.frame_len: int
         self.complete: bool  # true if complete frame is read
@@ -45,7 +66,7 @@ class FrameParser:
         # 1 byte start, 1 byte command, 1 byte length, no address, 4 byte ID
         self._frame_header_length: int = 1 + 1 + 1 + 0 + 4
         self.escape_indexes = []
-
+        self.incomplete_frame = True
         self.reset()  # init all variables
 
     def reset(self):
@@ -59,6 +80,7 @@ class FrameParser:
         self._frame_length = 0
         self._crc16 = 0
         self.crc_ok = False
+        self.incomplete_frame = True
         self.escape_indexes = []
 
     def rewinded(self):
@@ -106,7 +128,10 @@ class FrameParser:
             self.escape_indexes.append(pos)
         return new_buffer
 
-    def parse(self, buffer: memoryview) -> int:
+    def parse(self, buffer: memoryview) -> Tuple[ResponseFrame, int]:
+        frame: ResponseFrame = None
+        frame_type: FrameType = None
+
         log.debug('Buffer length: %d: %s', len(buffer), buffer.hex(' '))
         log.debug('current pos: %d', self.current_pos)
         # start token not yet found, find it
@@ -132,7 +157,7 @@ class FrameParser:
         if self.start < 0:  # no start token found, exit
             log.debug('no start token invalid data received len:%d ', length)
             self.current_pos = length  # we do not scan garbage data next time
-            return length
+            return None, length
 
         unescaped_buffer = memoryview(buffer)[self.start:]
         unescaped_buffer = self._unescape_buffer(unescaped_buffer)
@@ -145,8 +170,7 @@ class FrameParser:
         c = unescaped_buffer[i]
         log.debug('read: 0x%x at index %d', c, i)
 
-        if (length - i >= BUFFER_LEN_COMMAND and
-                self.command == Command._NONE):  # pylint: disable=protected-access
+        if length - i >= BUFFER_LEN_COMMAND:
             try:
                 self.command = Command(c)
             except ValueError as exc:
@@ -159,14 +183,16 @@ class FrameParser:
                             Command.is_plant(self.command))
             if Command.is_plant(self.command):
                 self._frame_header_length += 4
+                frame_type = FrameType.PLANT
                 log.debug('plant frame, extending header length by 4 to %d',
                     self._frame_header_length)
             if Command.is_long(self.command):
                 self._frame_header_length += 1
+                frame_type = FrameType.STANDARD
                 log.debug('long cmd, extending header length by 1 to %d',
                                     self._frame_header_length)
             i += 1
-        if length >= self._frame_header_length and self._frame_length == 0:
+        if length >= self._frame_header_length:
             log.debug('buffer length %d indicates that it contains entire header',
                 i)
             if Command.is_long(self.command):
@@ -197,6 +223,7 @@ class FrameParser:
         if self._frame_length > 0 and length >= self._frame_length:
             log.debug('buffer contains full frame, index: %d', i)
             self.data = unescaped_buffer[i:i + data_length]
+            log.debug('extracted data from: %d to %d: %s', i, i + data_length, self.data.hex(' '))
             self.complete = True
             i += data_length
             log.debug('crc i is: %d', i)
@@ -209,12 +236,24 @@ class FrameParser:
             if not self.crc_ok and not self.ignore_crc_mismatch:
                 raise FrameCRCMismatch('CRC mismatch', self._crc16, calc_crc16, i)
             log.debug('returning completed frame at %d', self._frame_length)
-            self.current_pos = i + 2
+            self.current_pos += i + 2
+            self.incomplete_frame = False
+            frame = ResponseFrame(
+                command=self.command,
+                oid=self.id,
+                crc16=calc_crc16,
+                crc_ok=self.crc_ok,
+                address=self.address,
+                frame_length=self._frame_length,
+                frame_type=frame_type,
+                payload=self.data,
+            )
         else:
             log.debug('frame is incomplete, stopping at %d', i)
+            self.incomplete_frame = True
             self.reset()
 
         for escape_index in self.escape_indexes:
             if self.current_pos >= escape_index:
                 self.current_pos += 1
-        return self.current_pos
+        return frame, self.current_pos

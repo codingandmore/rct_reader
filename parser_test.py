@@ -203,9 +203,8 @@ def test_buffer_rewind():
     org_len = len(dbl_buffer)
     # parse first message
     parser = rct_parser.FrameParser()
-    current_pos = parser.parse(dbl_buffer)
+    _, current_pos = parser.parse(dbl_buffer)
     # "rewind buffer by copying remaining bytes to front"
-    # parser.rewind()
     assert type(buffer) is bytearray
     remaining_len = org_len - current_pos
     dbl_buffer[0:remaining_len] = dbl_buffer[current_pos:org_len]
@@ -237,8 +236,9 @@ def test_parser_incomplete_second_frame():
     assert parser.current_pos == 14
 
     # assume another socket read call receiving the remaining bytes
-    mv = memoryview(buffer_total)
+    mv = memoryview(buffer_total)[parser.current_pos:]
     # now parse complete frame
+    print("parsing second frame")
     parser.parse(mv)
     assert parser.complete
     assert parser.crc_ok
