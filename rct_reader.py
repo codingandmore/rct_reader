@@ -96,10 +96,14 @@ class RctReader:
                 except TimeoutError:
                     print('Timeout, exiting recv')
                     break
+                if bytes_read == 0:
+                    print(f'Disconnect with {len(responses)} response frames')
+                    return responses  # no more data available, connection closed
                 if self.parser.incomplete_frame:
                     print(f'incomplete...correct offsets by {pos}')
                     buffer_pos -= pos
                     bytes_read += pos
+
                 # create a new memory view for parser and reset pos:
                 print(f'creating memory view from {buffer_pos} to {buffer_pos + bytes_read}')
                 mv = memoryview(self.buffer)[buffer_pos:buffer_pos + bytes_read]
@@ -118,7 +122,7 @@ class RctReader:
                 print(f'Response frame received: {oid}, crc ok: {self.parser.crc_ok}')
                 value = decode_value(oid.response_data_type, self.parser.data)
                 print(f'Value: {value}, type: {oid.response_data_type}')
-                responses.append(oid)
+                responses.append(frame)
 
         # rewind buffer:
         # remaining_len = pos + bytes_read - self.parser.current_pos
