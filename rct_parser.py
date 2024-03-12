@@ -56,7 +56,7 @@ class FrameParser:
         self._frame_length: int  # length of frame
         self.address: int
         self.id: int
-        self.data: bytes
+        self.data: bytearray
         self._crc16: int
         self.crc_ok: bool
         self.ignore_crc_mismatch: bool = ignore_crc
@@ -75,7 +75,7 @@ class FrameParser:
         self.command = Command._NONE  # pylint: disable=protected-access
         self.address: int = 0
         self.id: int = 0
-        self.data = b''
+        self.data = bytearray()
         self.start = -1
         self._frame_length = 0
         self._crc16 = 0
@@ -222,7 +222,7 @@ class FrameParser:
             log.debug('i is: %d', i)
         if self._frame_length > 0 and length >= self._frame_length:
             log.debug('buffer contains full frame, index: %d', i)
-            self.data = unescaped_buffer[i:i + data_length]
+            self.data[:] = unescaped_buffer[i:i + data_length]
             log.debug('extracted data from: %d to %d: %s', i, i + data_length, self.data.hex(' '))
             self.complete = True
             i += data_length

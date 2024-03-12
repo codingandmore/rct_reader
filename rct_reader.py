@@ -124,13 +124,16 @@ class RctReader:
                 print(f'Value: {value}, type: {oid.response_data_type}')
                 responses.append(frame)
 
-        # rewind buffer:
-        # remaining_len = pos + bytes_read - self.parser.current_pos
-        # if remaining_len > 0:
-        #     self.buffer[0:remaining_len] = self.buffer[self.parser.current_pos:
-        #                                                self.parser.current_pos + remaining_len]
-        # pos = 0
-        # self.parser.rewinded()
+            # if all bytes are consumed we can rewind buffer to read next chunk at buffer start:
+            if self.parser.current_pos == bytes_read:
+                print('Rewinding buffer')
+                buffer_pos = 0
+                bytes_read = 0
+                self.parser.rewinded()
+            # rewind buffer if it fills up and copy remaining data then
+            # if buffer_pos > len(self.buffer) / 2:
+            #     self.buffer[0:bytes_read - self.parser.current_pos] = self.buffer[buffer_pos + self.parser.current_pos:buffer_pos + bytes_read]
+
         print("Finished parsing")
         return responses
 
