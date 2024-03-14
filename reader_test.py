@@ -67,6 +67,7 @@ def create_frames_and_check_result(
         at_once: bool = False,
         with_garbage: bool = False,
         unknown_size: bool = False,
+        cut_packet: bool = False,  # split packets so that recv get half frane
 ):
     p_acc_lp_objinfo = Reg.get_by_name('g_sync.p_acc_lp')
     p_acc_lp_value = 123.456
@@ -92,6 +93,12 @@ def create_frames_and_check_result(
         test_packets = [join_char.join(test_packets)]
     elif with_garbage:
         test_packets += bytearray([0x0, 0x1, 0x0])
+
+    if not at_once and cut_packet:
+        cut_point = int(len(test_packets[0]) / 2)
+        packet1 = test_packets[0] + test_packets[1][0:cut_point]
+        packet2 = test_packets[1][cut_point:]
+        test_packets = [packet1, packet2]
 
     mock_socket.set_receive_data(test_packets)
 
@@ -131,3 +138,46 @@ def test_with_unknown_size(mock_socket, caplog):
     caplog.set_level(logging.DEBUG)
     create_frames_and_check_result(mock_socket, False, False, True)
     create_frames_and_check_result(mock_socket, True, False, True)
+
+
+def test_cut_frame_(mock_socket, caplog):
+    caplog.set_level(logging.DEBUG)
+    create_frames_and_check_result(mock_socket, False, False, cut_packet=True)
+
+
+def test_buffer_rewind(mock_socket, caplog):
+    caplog.set_level(logging.DEBUG)
+    string_objinfo = Reg.get_by_name('inverter_sn')
+    string_value = "1.2.3-0de83a78334c64250b18b5191f6cbd6b97e77f84+0de83a78334c64250b18b5191f6cbd6b97e77f84"
+    bat_cycles_objinfo = Reg.get_by_name('battery.cycles')
+    bat_cycles_value = 42
+
+    test_packets = [
+        make_frame(
+            command=Command.RESPONSE,
+            id=string_objinfo.object_id,
+            payload=encode_value(string_objinfo.request_data_type, string_value)
+        ),
+        make_frame(
+            command=Command.RESPONSE,
+            id=bat_cycles_objinfo.object_id,
+            payload=encode_value(bat_cycles_objinfo.request_data_type, bat_cycles_value)
+        ),
+    ]
+    expected_frames = len(test_packets)
+
+    test_packets[0] = test_packets[0] + b'###'  # add some garbage data to enforce copy remaining data
+    mock_socket.set_receive_data(test_packets)
+
+    with rct_reader.RctReader('dummy', "dummy", buffer_size=len(test_packets[0]) + 5) as reader:
+        responses = reader.read_frame(expected_frames)
+
+        assert len(responses) == expected_frames
+        resp = responses[0]
+        value = decode_value(string_objinfo.response_data_type, resp.payload)
+        assert value == string_value
+        resp = responses[1]
+        value = decode_value(bat_cycles_objinfo.response_data_type, resp.payload)
+        assert value == bat_cycles_value
+
+        assert reader.buffer.find(b'###') == 0

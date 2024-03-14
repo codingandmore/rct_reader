@@ -51,7 +51,6 @@ class ResponseFrame:
 class FrameParser:
     def __init__(self, ignore_crc: bool = False):
         self.frame_len: int
-        self.complete: bool  # true if complete frame is read
         self.command: Command
         self._frame_length: int  # length of frame
         self.address: int
@@ -59,19 +58,19 @@ class FrameParser:
         self.data: bytearray
         self._crc16: int
         self.crc_ok: bool
+        self.complete_frame: bool
+        self.start: int       # index of start token
+
         self.ignore_crc_mismatch: bool = ignore_crc
-        self.start: int = -1        # index of start token
         self.current_pos: int = 0   # index where to start parsing next frame
         # set initially to the minimum length a frame header (i.e. everything before the data) can be.
         # 1 byte start, 1 byte command, 1 byte length, no address, 4 byte ID
         self._frame_header_length: int = 1 + 1 + 1 + 0 + 4
         self.escape_indexes = []
-        self.incomplete_frame = True
         self.reset()  # init all variables
 
     def reset(self):
         self.frame_len = 0
-        self.complete = False
         self.command = Command._NONE  # pylint: disable=protected-access
         self.address: int = 0
         self.id: int = 0
@@ -80,7 +79,7 @@ class FrameParser:
         self._frame_length = 0
         self._crc16 = 0
         self.crc_ok = False
-        self.incomplete_frame = True
+        self.complete_frame = True
         self.escape_indexes = []
 
     def rewinded(self):
@@ -138,7 +137,7 @@ class FrameParser:
         i = self.current_pos
         length = len(buffer)
 
-        if self.complete and self.current_pos < length:
+        if self.complete_frame and self.current_pos < length:
             log.debug("trying to find next frame")
             self.reset()
 
@@ -157,6 +156,7 @@ class FrameParser:
         if self.start < 0:  # no start token found, exit
             log.debug('no start token invalid data received len:%d ', length)
             self.current_pos = length  # we do not scan garbage data next time
+            self.complete_frame = False
             return None, length
 
         unescaped_buffer = memoryview(buffer)[self.start:]
@@ -224,7 +224,6 @@ class FrameParser:
             log.debug('buffer contains full frame, index: %d', i)
             self.data[:] = unescaped_buffer[i:i + data_length]
             log.debug('extracted data from: %d to %d: %s', i, i + data_length, self.data.hex(' '))
-            self.complete = True
             i += data_length
             log.debug('crc i is: %d', i)
             self._crc16 = struct.unpack('>H', unescaped_buffer[i:i + 2])[0]
@@ -237,7 +236,7 @@ class FrameParser:
                 raise FrameCRCMismatch('CRC mismatch', self._crc16, calc_crc16, i)
             log.debug('returning completed frame at %d', self._frame_length)
             self.current_pos += i + 2
-            self.incomplete_frame = False
+            self.complete_frame = True
             frame = ResponseFrame(
                 command=self.command,
                 oid=self.id,
@@ -250,8 +249,8 @@ class FrameParser:
             )
         else:
             log.debug('frame is incomplete, stopping at %d', i)
-            self.incomplete_frame = True
             self.reset()
+            self.complete_frame = False
 
         for escape_index in self.escape_indexes:
             if self.current_pos >= escape_index:

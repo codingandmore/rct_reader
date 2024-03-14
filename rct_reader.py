@@ -31,8 +31,8 @@ import rct_parser
 # Documentation: https://rctclient.readthedocs.io/
 
 class RctReader:
-    def __init__(self, host: str, port: str, timeout: float = 3.0):
-        self.buffer = bytearray(2048)
+    def __init__(self, host: str, port: str, timeout: float = 3.0, buffer_size: int = 2048):
+        self.buffer = bytearray(buffer_size)
         self.start = 0
         self.host = host
         self.port = port
@@ -87,8 +87,8 @@ class RctReader:
             pos = self.parser.current_pos
             # read next chunk if remaining bytes in buffer are an incomplete
             # frame or buffer is empty:
-            if self.parser.incomplete_frame or pos == bytes_read:
-                buffer_pos += pos
+            if (not self.parser.complete_frame) or pos == bytes_read:
+                buffer_pos += bytes_read
                 socket_buffer_view = memoryview(self.buffer)[buffer_pos:len(self.buffer)]
                 try:
                     bytes_read = self.sock.recv_into(socket_buffer_view, len(socket_buffer_view))
@@ -99,20 +99,15 @@ class RctReader:
                 if bytes_read == 0:
                     print(f'Disconnect with {len(responses)} response frames')
                     return responses  # no more data available, connection closed
-                if self.parser.incomplete_frame:
-                    print(f'incomplete...correct offsets by {pos}')
-                    buffer_pos -= pos
-                    bytes_read += pos
 
                 # create a new memory view for parser and reset pos:
                 print(f'creating memory view from {buffer_pos} to {buffer_pos + bytes_read}')
-                mv = memoryview(self.buffer)[buffer_pos:buffer_pos + bytes_read]
-                self.parser.rewinded()
+                mv = memoryview(self.buffer)[0:buffer_pos + bytes_read]
 
             # try to parse next frame
             frame, _ = self.parser.parse(mv)
-            print(f'Parser complete: {self.parser.complete}')
-            if self.parser.complete:
+            print(f'Parser complete: {self.parser.complete_frame}')
+            if self.parser.complete_frame:
                 frames_received += 1
                 if no_frames > 0:
                     print(f'Received {frames_received}, expected: {no_frames}')
@@ -124,15 +119,22 @@ class RctReader:
                 print(f'Value: {value}, type: {oid.response_data_type}')
                 responses.append(frame)
 
-            # if all bytes are consumed we can rewind buffer to read next chunk at buffer start:
-            if self.parser.current_pos == bytes_read:
-                print('Rewinding buffer')
-                buffer_pos = 0
-                bytes_read = 0
-                self.parser.rewinded()
+                # if all bytes are consumed we can rewind buffer to read next chunk at buffer start:
+                if self.parser.current_pos == bytes_read:
+                    print('Rewinding buffer')
+                    buffer_pos = 0
+                    bytes_read = 0
+                    self.parser.rewinded()
+
             # rewind buffer if it fills up and copy remaining data then
-            # if buffer_pos > len(self.buffer) / 2:
-            #     self.buffer[0:bytes_read - self.parser.current_pos] = self.buffer[buffer_pos + self.parser.current_pos:buffer_pos + bytes_read]
+            if buffer_pos + bytes_read > len(self.buffer) / 2:
+                print("Enforce rewind, potential overflow")
+                pos = self.parser.current_pos
+                self.buffer[0:bytes_read - pos] = mv[pos:bytes_read]
+                self.parser.rewinded()
+                mv = memoryview(self.buffer)[0:bytes_read - pos]
+                buffer_pos = 0
+                bytes_read = bytes_read - pos
 
         print("Finished parsing")
         return responses
