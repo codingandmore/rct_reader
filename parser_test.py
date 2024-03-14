@@ -46,12 +46,14 @@ def check_response(frame: Frame, frame_bytes: bytes = None) -> rct_parser.FrameP
         frame_buffer = frame.make_frame()
     frame_buffer = memoryview(frame_buffer)
     parser = rct_parser.FrameParser()
-    parser.parse(frame_buffer)
+    res_frame = parser.parse(frame_buffer)
     assert parser.complete_frame
-    assert parser.crc_ok
-    assert parser.id == frame.frame_id
-    value = decode_value(frame.dataType, parser.data)
+    assert res_frame.crc_ok
+    assert frame.frame_id == res_frame.oid
+    value = decode_value(frame.dataType, frame.payload)
     assert value == frame.value
+    assert res_frame.address == frame.address
+
     return parser
 
 
@@ -88,9 +90,9 @@ def test_parser_garbage_data():
     test_frame = bytes.fromhex('00 00 FF FF 01')
     parser = rct_parser.FrameParser()
     test_frame = memoryview(test_frame)
-    parser.parse(test_frame)
+    frame = parser.parse(test_frame)
     assert not parser.complete_frame
-    assert not parser.data
+    assert frame is None
 
 
 def test_parser_incomplete_frame():
@@ -101,16 +103,16 @@ def test_parser_incomplete_frame():
     buffer2 = buffer[mid:]
     print(f'using frame: {buffer1} and {buffer2}')
     parser = rct_parser.FrameParser()
-    parser.parse(memoryview(buffer1))
+    res_frame = parser.parse(memoryview(buffer1))
     # should succeed but be inclompete now
     assert not parser.complete_frame
     # assume another socket read call receiving the remaining bytes
     buffer1 += buffer2
     # now parse complete frame
-    parser.parse(memoryview(buffer1))
+    res_frame = parser.parse(memoryview(buffer1))
     assert parser.complete_frame
-    assert parser.crc_ok
-    value = decode_value(frame.dataType, parser.data)
+    assert res_frame.crc_ok
+    value = decode_value(frame.dataType, res_frame.payload)
     assert value == frame.value
 
 
@@ -120,16 +122,16 @@ def test_parser_two_frames():
     dbl_buffer = buffer + buffer
     parser = rct_parser.FrameParser()
     dbl_buffer = memoryview(dbl_buffer)
-    parser.parse(dbl_buffer)
+    res_frame = parser.parse(dbl_buffer)
     assert parser.complete_frame
-    assert parser.crc_ok
-    value = decode_value(frame.dataType, parser.data)
+    assert res_frame.crc_ok
+    value = decode_value(frame.dataType, res_frame.payload)
     assert value == frame.value
     # now parse again to get the second frame
-    parser.parse(dbl_buffer)
+    res_frame = parser.parse(dbl_buffer)
     assert parser.complete_frame
-    assert parser.crc_ok
-    value = decode_value(frame.dataType, parser.data)
+    assert res_frame.crc_ok
+    value = decode_value(frame.dataType, res_frame.payload)
     assert value == frame.value
 
 
@@ -141,8 +143,7 @@ def test_parser_plant_message():
         frame_type=FrameType.PLANT,
         address=4711,
     )
-    parser = check_response(frame)
-    assert parser.address == frame.address
+    check_response(frame)
 
 
 def test_parser_string_message():
@@ -152,8 +153,7 @@ def test_parser_string_message():
         value="Lorem ipsum dolor sit amet.",
         frame_type=FrameType.STANDARD,
     )
-    parser = check_response(frame)
-    assert parser.address == frame.address
+    check_response(frame)
 
 
 def test_parser_float_message():
@@ -167,8 +167,7 @@ def test_parser_float_message():
         value=f_val,
         frame_type=FrameType.STANDARD,
     )
-    parser = check_response(frame)
-    assert parser.address == frame.address
+    check_response(frame)
 
 
 def test_long_frame():
@@ -178,8 +177,7 @@ def test_long_frame():
         value=LOREM,
         frame_type=FrameType.STANDARD,
     )
-    parser = check_response(frame)
-    assert parser.address == frame.address
+    check_response(frame)
 
 
 def test_long_frame_plant():
@@ -190,8 +188,7 @@ def test_long_frame_plant():
         frame_type=FrameType.PLANT,
         address=4711,
     )
-    parser = check_response(frame)
-    assert parser.address == frame.address
+    check_response(frame)
 
 
 def test_buffer_rewind():
@@ -203,17 +200,17 @@ def test_buffer_rewind():
     org_len = len(dbl_buffer)
     # parse first message
     parser = rct_parser.FrameParser()
-    _, current_pos = parser.parse(dbl_buffer)
+    res_frame = parser.parse(dbl_buffer)
     # "rewind buffer by copying remaining bytes to front"
     assert type(buffer) is bytearray
-    remaining_len = org_len - current_pos
-    dbl_buffer[0:remaining_len] = dbl_buffer[current_pos:org_len]
+    remaining_len = org_len - parser.current_pos
+    dbl_buffer[0:remaining_len] = dbl_buffer[parser.current_pos:org_len]
     assert len(dbl_buffer) == org_len
     parser.rewinded()
-    parser.parse(dbl_buffer)
+    res_frame = parser.parse(dbl_buffer)
     assert parser.complete_frame
-    assert parser.crc_ok
-    value = decode_value(frame.dataType, parser.data)
+    assert res_frame.crc_ok
+    value = decode_value(frame.dataType, res_frame.payload)
     assert value == frame2.value
 
 
@@ -226,10 +223,10 @@ def test_parser_incomplete_second_frame():
     mid = int(len(buffer2) / 2)
     buffer_total = buffer1 + buffer2
     parser = rct_parser.FrameParser()
-    parser.parse(memoryview(buffer_total)[0:len(buffer1) + mid])
+    res_frame = parser.parse(memoryview(buffer_total)[0:len(buffer1) + mid])
     assert parser.complete_frame
-    assert parser.crc_ok
-    value = decode_value(frame1.dataType, parser.data)
+    assert res_frame.crc_ok
+    value = decode_value(frame1.dataType, res_frame.payload)
     assert value == frame1.value
     assert parser.current_pos < len(buffer1) + mid
     assert buffer_total[parser.current_pos] == ord(b'+')
@@ -239,10 +236,10 @@ def test_parser_incomplete_second_frame():
     mv = memoryview(buffer_total)[0:]
     # now parse complete frame
     print("parsing second frame")
-    parser.parse(mv)
+    res_frame = parser.parse(mv)
     assert parser.complete_frame
-    assert parser.crc_ok
-    value = decode_value(frame2.dataType, parser.data)
+    assert res_frame.crc_ok
+    value = decode_value(frame2.dataType, res_frame.payload)
     assert value == frame2.value
 
 

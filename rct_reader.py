@@ -105,7 +105,7 @@ class RctReader:
                 mv = memoryview(self.buffer)[0:buffer_pos + bytes_read]
 
             # try to parse next frame
-            frame, _ = self.parser.parse(mv)
+            frame = self.parser.parse(mv)
             print(f'Parser complete: {self.parser.complete_frame}')
             if self.parser.complete_frame:
                 frames_received += 1
@@ -114,8 +114,8 @@ class RctReader:
                     continue_parsing = frames_received < no_frames
 
                 oid = R.get_by_id(frame.oid)
-                print(f'Response frame received: {oid}, crc ok: {self.parser.crc_ok}')
-                value = decode_value(oid.response_data_type, self.parser.data)
+                print(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
+                value = decode_value(oid.response_data_type, frame.payload)
                 print(f'Value: {value}, type: {oid.response_data_type}')
                 responses.append(frame)
 
