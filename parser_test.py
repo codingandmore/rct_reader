@@ -236,7 +236,7 @@ def test_parser_incomplete_second_frame():
     assert parser.current_pos == 14
 
     # assume another socket read call receiving the remaining bytes
-    mv = memoryview(buffer_total)[parser.current_pos:]
+    mv = memoryview(buffer_total)[0:]
     # now parse complete frame
     print("parsing second frame")
     parser.parse(mv)

@@ -59,7 +59,6 @@ class FrameParser:
         self._crc16: int
         self.crc_ok: bool
         self.complete_frame: bool
-        self.start: int       # index of start token
 
         self.ignore_crc_mismatch: bool = ignore_crc
         self.current_pos: int = 0   # index where to start parsing next frame
@@ -75,7 +74,6 @@ class FrameParser:
         self.address: int = 0
         self.id: int = 0
         self.data = bytearray()
-        self.start = -1
         self._frame_length = 0
         self._crc16 = 0
         self.crc_ok = False
@@ -135,13 +133,13 @@ class FrameParser:
         log.debug('current pos: %d', self.current_pos)
         # start token not yet found, find it
         i = self.current_pos
+        start = -1
         length = len(buffer)
-
         if self.complete_frame and self.current_pos < length:
             log.debug("trying to find next frame")
             self.reset()
 
-        while self.start < 0 and i < length:
+        while start < 0 and i < length:
             c = buffer[i]
             log.debug('read: 0x%x at index %d', c, i)
             # sync to start_token
@@ -150,16 +148,16 @@ class FrameParser:
                     log.debug('escaped start token found, ignoring')
                 else:
                     log.debug('start token found')
-                    self.start = i
+                    start = i
             i += 1
 
-        if self.start < 0:  # no start token found, exit
+        if start < 0:  # no start token found, exit
             log.debug('no start token invalid data received len:%d ', length)
             self.current_pos = length  # we do not scan garbage data next time
             self.complete_frame = False
             return None, length
 
-        unescaped_buffer = memoryview(buffer)[self.start:]
+        unescaped_buffer = memoryview(buffer)[start:]
         unescaped_buffer = self._unescape_buffer(unescaped_buffer)
         log.debug('Escaped buffer length: %d: %s', len(unescaped_buffer), unescaped_buffer.hex(' '))
 
