@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
-import argparse
 import logging
 import socket
-import time
 from rctclient.frame import make_frame  # , ReceiveFrame
 from rctclient.registry import REGISTRY as R
 from rctclient.types import Command
@@ -37,6 +35,7 @@ class RctReader:
         self.timeout = timeout
         self.parser = FrameParser()
         self.sock = None
+        log.debug(f'Reader initialized with buffer size {buffer_size}')
 
     def __enter__(self):
         # open the socket and connect to the remote device:
@@ -118,7 +117,7 @@ class RctReader:
                 responses.append(frame)
 
                 # if all bytes are consumed we can rewind buffer to read next chunk at buffer start:
-                if self.parser.current_pos == bytes_read:
+                if self.parser.current_pos == buffer_pos + bytes_read:
                     logging.debug('Rewinding buffer')
                     buffer_pos = 0
                     bytes_read = 0
@@ -128,46 +127,15 @@ class RctReader:
             if buffer_pos + bytes_read > len(self.buffer) / 2:
                 logging.debug("Enforce rewind, potential overflow")
                 pos = self.parser.current_pos
-                self.buffer[0:bytes_read - pos] = mv[pos:bytes_read]
+                remaining_bytes = len(mv) - pos
+                logging.debug(f'rewind buffer: {bytes_read=}, {pos=}, {len(mv)=}, {remaining_bytes=}')
+                self.buffer[0:remaining_bytes] = mv[pos:]
                 self.parser.rewinded()
-                mv = memoryview(self.buffer)[0:bytes_read - pos]
                 buffer_pos = 0
-                bytes_read = bytes_read - pos
+                bytes_read = len(mv) - pos
+                mv = memoryview(self.buffer)[0:remaining_bytes]
 
         logging.debug("Finished parsing")
         return responses
 
 
-def main():
-    logging.basicConfig(level=logging.WARN)
-    parser = argparse.ArgumentParser(
-        prog='rct-reader',
-        description='Read data from RCT inverter',
-    )
-    parser.add_argument('--host', help='host-name or IP of device', required=True)
-    parser.add_argument('--port', default=8899, help='Port to connect to, default 8899',
-              metavar='<port>')
-    # parser.add_argument('--name', help='OID name from registry', required=False)
-
-    parsed = parser.parse_args()
-
-    oids = ['g_sync.p_acc_lp', 'g_sync.p_ac_load_sum_lp', 'g_sync.p_ac_grid_sum_lp', 'battery.soc',
-            'inv_struct.cosinus_phi']
-    while True:
-        with RctReader('localhost', parsed.port) as reader:
-            print("Reading...")
-            # read_frame(parsed.host, parsed.name)
-            frames = reader.read_frames(oids)
-            # reader.read_frames_send_all_before_receive(oids)
-            for frame in frames:
-                if frame.crc_ok:
-                    oid = R.get_by_id(frame.oid)
-                    value = decode_value(oid.response_data_type, frame.payload)
-                    print(f'{oid.name} ({oid.description}): {value}, type: {oid.response_data_type}')
-                else:
-                    print("Error wrong crc!")
-            time.sleep(3)
-
-
-if __name__ == '__main__':
-    main()
