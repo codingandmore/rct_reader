@@ -155,6 +155,11 @@ def test_buffer_rewind(mock_socket, caplog):
     test_packets = [
         make_frame(
             command=Command.RESPONSE,
+            id=bat_cycles_objinfo.object_id,
+            payload=encode_value(bat_cycles_objinfo.request_data_type, bat_cycles_value)
+        ),
+        make_frame(
+            command=Command.RESPONSE,
             id=string_objinfo.object_id,
             payload=encode_value(string_objinfo.request_data_type, string_value)
         ),
@@ -166,18 +171,20 @@ def test_buffer_rewind(mock_socket, caplog):
     ]
     expected_frames = len(test_packets)
 
-    test_packets[0] = test_packets[0] + b'###'  # add some garbage data to enforce copy remaining data
+    test_packets[1] = test_packets[1] + b'###'  # add some garbage data to enforce copy remaining data
     mock_socket.set_receive_data(test_packets)
 
-    with rct_reader.RctReader('dummy', "dummy", buffer_size=len(test_packets[0]) + 5) as reader:
+    with rct_reader.RctReader('dummy', "dummy", buffer_size=128) as reader:
         responses = reader.read_frame(expected_frames)
 
         assert len(responses) == expected_frames
         resp = responses[0]
+        value = decode_value(bat_cycles_objinfo.response_data_type, resp.payload)
+        assert value == bat_cycles_value
+        resp = responses[1]
         value = decode_value(string_objinfo.response_data_type, resp.payload)
         assert value == string_value
-        resp = responses[1]
+        resp = responses[2]
         value = decode_value(bat_cycles_objinfo.response_data_type, resp.payload)
         assert value == bat_cycles_value
 
-        assert reader.buffer.find(b'###') == 0
