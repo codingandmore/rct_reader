@@ -127,7 +127,7 @@ class FrameParser:
 
         while start < 0 and i < length:
             c = buffer[i]
-            log.debug('read: 0x{c:02x} at index {i}')
+            log.debug(f'read: 0x{c:02x} at index {i}')
             # sync to start_token
             if c == START_TOKEN:
                 if i > 0 and buffer[i - 1] == ESCAPE_TOKEN:

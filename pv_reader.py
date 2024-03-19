@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from rctclient.registry import REGISTRY as R
 from rctclient.utils import decode_value
+from rctclient.exceptions import ReceiveFrameError
 from rct_reader import RctReader
 from influxdb_client import InfluxDBClient, Point
 
@@ -18,7 +19,9 @@ def read_oid_set(reader: RctReader, oid_set) -> dict[str, any]:
     frames = reader.read_frames(oids)
     i = 0
     for frame in frames:
-        if frame.crc_ok:
+        if frame is None:
+            print("Error no response received")
+        elif frame.crc_ok:
             oid = R.get_by_id(frame.oid)
             req_oid = R.get_by_name(oids[i])
             value = decode_value(oid.response_data_type, frame.payload)
@@ -46,18 +49,37 @@ def get_units(oid_names: set[str]) -> dict[str, str]:
     return result
 
 
-def main():
-    # HF-A21.fritz.box
-    logging.basicConfig(level=logging.WARN)
-    parser = argparse.ArgumentParser(
-        prog='rct-reader',
-        description='Read data from RCT inverter',
-    )
-    parser.add_argument('--host', help='host-name or IP of device', required=True)
-    parser.add_argument('--port', default=8899, help='Port to connect to, default 8899',
-              metavar='<port>')
+def listen_only(rct_inverter_host: str, rct_inverter_port: str):
+    with RctReader(rct_inverter_host, rct_inverter_port, timeout=30) as reader:
+        while True:
+            frames = reader.recv_frame()
+            print(f'Received {len(frames)} packets')
+            for frame in frames:
+                oid = R.get_by_id(frame.oid)
+                print(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
+                value = decode_value(oid.response_data_type, frame.payload)
+                print(f'Value: {value}, type: {oid.response_data_type}')
 
-    parsed = parser.parse_args()
+
+def send_command(command: str, rct_inverter_host: str, rct_inverter_port: str):
+    with RctReader(rct_inverter_host, rct_inverter_port) as reader:
+        print(f'Sending command {command}')
+        frame = reader.read_frame(command)
+        if frame is None:
+            print("Error no response received")
+        else:
+            oid = R.get_by_id(frame.oid)
+            print(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
+            value = decode_value(oid.response_data_type, frame.payload)
+            print(f'Value: {value}, type: {oid.response_data_type}')
+
+
+def monitor_inverter(
+    rct_inverter_host: str,
+    rct_inverter_port: str = '8899',
+    influx_url: str = 'http://localhost:8086',
+    use_db: bool = True,
+):
     short_interval_readings = {
         'dc_conv.dc_conv_struct[0].p_dc': 'power_panel_0',
         'dc_conv.dc_conv_struct[1].p_dc': 'power_panel_1',
@@ -85,61 +107,6 @@ def main():
     units = get_units(short_interval_readings.keys())
     units |= get_units(long_interval_readings.keys())
 
-    # oids = ['g_sync.p_acc_lp', 'g_sync.p_ac_load_sum_lp', 'g_sync.p_ac_grid_sum_lp', 'battery.soc',
-    #         'inv_struct.cosinus_phi']
-
-# g_sync.p_acc_lp
-# Battery Power (negative for discharge) W
-
-# g_sync.p_ac_load_sum_lp
-# Load household - external Power momentaner Verbrauch W
-
-# g_sync.p_ac_grid_sum_lp
-# Total grid power (see Power grid) Bezug aus dem Netz in W
-
-# battery.soc
-# Battery State of Charge   0..1 Ladezustand
-
-# grid_pll[0].f
-# Grid frequency [Hz]       Detektierung Stromausfall
-
-# g_sync.p_ac_load[0] (left)
-# g_sync.p_ac_load[1] (middle)
-# g_sync.p_ac_load[2] (right)
-# Load household phase [W]      Leistung pro Phase
-
-# energy.e_ac_day
-# Day energy [kWh]
-
-# energy.e_ac_total
-# Total energy [MWh]
-
-
-# energy.e_grid_load_day'
-# description='Day energy grid load
-
-# energy.e_ext_day',
-# description='External day energy'
-
-# energy.e_dc_day_sum[0]
-
-# 'energy.e_dc_day[0]'
-# description='Solar generator A day energy'),
-# 'energy.e_dc_day[1]'
-# description='Solar generator B day energy'),
-
-# g_sync.s_ac_lp[0]
-# Apparent power phase 1
-
-# name='power_mng.amp_hours_measured',
-# description='Measured battery capacity'),
-
-# power_mng.amp_hours',
-# description='Battery energy'
-
-# prim_sm.island_flag
-# description='Grid-separated'
-
     bucket = 'photovoltaic/autogen'
 
     username = "admin"
@@ -150,9 +117,9 @@ def main():
     readings: dict[str, any] = {}
     use_db = False
 
-    with InfluxDBClient(url='http://localhost:8086', token=f'{username}:{password}', org='-') as influx:
+    with InfluxDBClient(url=influx_url, token=f'{username}:{password}', org='-') as influx:
         with influx.write_api() as write_api:
-            with RctReader(parsed.host, parsed.port, buffer_size=512) as reader:
+            with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512) as reader:
                 while True:
                     print("Reading...")
                     start = datetime.now()
@@ -185,6 +152,45 @@ def main():
                     remaining = (interval_short - (end - start)).seconds
                     if remaining > 0:
                         time.sleep(remaining)
+
+
+def main():
+    # HF-A21.fritz.box
+    parser = argparse.ArgumentParser(
+        prog='rct-reader',
+        description='Read data from RCT inverter',
+    )
+    parser.add_argument('--host', help='host-name or IP of device', required=True)
+    parser.add_argument('--port', default=8899, help='Port to connect to, default 8899',
+              metavar='<port>')
+    parser.add_argument('--no-db', help='do not write into database', action='store_true')
+    parser.add_argument('--listen-only', help='debug do not send commands', action='store_true')
+    parser.add_argument('--command', help='send single command to device')
+    parser.add_argument('-v', '--verbose', help='enable debug logging', action='store_true')
+
+    parsed = parser.parse_args()
+    if parsed.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.WARNING)
+
+    if parsed.command:
+        send_command(parsed.command, parsed.host, parsed.port)
+    elif parsed.listen_only:
+        print('Listening to inverter port')
+        try:
+            listen_only(parsed.host, parsed.port)
+        except TimeoutError:
+            print('Stop reading: timeout occured')
+        except ReceiveFrameError as ex:
+            print(f'Stop reading: Frame read error received: {ex}')
+
+    else:
+        monitor_inverter(
+            rct_inverter_host=parsed.host,
+            rct_inverter_port=parsed.port,
+            use_db=not parsed.no_db
+        )
 
 
 if __name__ == '__main__':

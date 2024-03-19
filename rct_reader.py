@@ -3,7 +3,7 @@
 import logging
 import socket
 from rctclient.frame import make_frame  # , ReceiveFrame
-from rctclient.registry import REGISTRY as R
+from rctclient.registry import REGISTRY as R, ObjectInfo
 from rctclient.types import Command
 from rctclient.utils import decode_value
 from rct_parser import ResponseFrame
@@ -56,7 +56,7 @@ class RctReader:
             logging.debug(f'Sending command {oid}')
             self.sock.sendall(send_frame)
 
-        self.read_frame(len(oids))
+        self.read_frames(len(oids))
         return result
 
     def read_frames(self, oids: list[str]) -> list[ResponseFrame]:
@@ -66,10 +66,29 @@ class RctReader:
             send_frame = make_frame(command=Command.READ, id=oid.object_id)
             logging.debug(f'Sending command {oid}')
             self.sock.sendall(send_frame)
-            result += self.read_frame(1)
+            result.append(self._read_frame(oid))
         return result
 
-    def read_frame(self, no_frames: int = 0) -> list[ResponseFrame]:
+    def read_frame(self, oid_name: str) -> ResponseFrame:
+        oid = R.get_by_name(oid_name)
+        return self._read_frame(oid)
+
+    def _read_frame(self, oid: ObjectInfo) -> ResponseFrame:
+        send_frame = make_frame(command=Command.READ, id=oid.object_id)
+        logging.debug(f'Sending command {oid}')
+        self.sock.sendall(send_frame)
+        results = self.recv_frame(1)
+        length = len(results)
+        if length == 1:
+            return results[0]
+        elif length == 0:
+            log.error('Did not receive response frame')
+            return None
+        else:
+            log.warning("Received more than one response, using first one   ")
+            return results[0]
+
+    def recv_frame(self, no_frames: int = 0) -> list[ResponseFrame]:
         # query information about an object ID (here: battery.soc):
         bytes_read = self.parser.current_pos
         buffer_pos = 0
@@ -137,5 +156,3 @@ class RctReader:
 
         logging.debug("Finished parsing")
         return responses
-
-
