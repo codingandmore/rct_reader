@@ -131,9 +131,13 @@ class RctReader:
 
                 oid = R.get_by_id(frame.oid)
                 logging.debug(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
-                value = decode_value(oid.response_data_type, frame.payload)
-                logging.debug(f'Value: {value}, type: {oid.response_data_type}')
-                responses.append(frame)
+                try:
+                    value = decode_value(oid.response_data_type, frame.payload)
+                    logging.debug(f'Value: {value}, type: {oid.response_data_type}')
+                    responses.append(frame)
+                except KeyError as ex:
+                    logging.error(f'Error when decoding frame: {ex}')
+                    responses.append(None)
 
                 # if all bytes are consumed we can rewind buffer to read next chunk at buffer start:
                 if self.parser.current_pos == buffer_pos + bytes_read:

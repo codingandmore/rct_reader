@@ -52,13 +52,21 @@ def get_units(oid_names: set[str]) -> dict[str, str]:
 def listen_only(rct_inverter_host: str, rct_inverter_port: str):
     with RctReader(rct_inverter_host, rct_inverter_port, timeout=30) as reader:
         while True:
-            frames = reader.recv_frame()
-            print(f'Received {len(frames)} packets')
-            for frame in frames:
-                oid = R.get_by_id(frame.oid)
-                print(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
-                value = decode_value(oid.response_data_type, frame.payload)
-                print(f'Value: {value}, type: {oid.response_data_type}')
+            try:
+                frames = reader.recv_frame()
+                print(f'Received {len(frames)} packets')
+                for frame in frames:
+                    oid = R.get_by_id(frame.oid)
+                    print(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
+                    try:
+                        value = decode_value(oid.response_data_type, frame.payload)
+                        print(f'Value: {value}, type: {oid.response_data_type}')
+                    except KeyError as ex:
+                        print(f'Error: Cannot decode value: {ex}')
+            except TimeoutError:
+                print('Timeout occured')
+            except ReceiveFrameError as ex:
+                print(f'Error: Frame read error received: {ex}')
 
 
 def send_command(command: str, rct_inverter_host: str, rct_inverter_port: str):
