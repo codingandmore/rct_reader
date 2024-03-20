@@ -53,7 +53,7 @@ def test_reader_simple(mock_socket, caplog):  # pylint: disable=unused-argument,
     caplog.set_level(logging.DEBUG)
     mock_socket.set_receive_data([test_buffer])
     with rct_reader.RctReader('localhost', "8899") as reader:
-        responses = reader.read_frame(1)
+        responses = reader.recv_frame(1)
         resp = responses[0]
         assert len(responses) == 1
         oid = Reg.get_by_id(resp.oid)
@@ -104,9 +104,9 @@ def create_frames_and_check_result(
 
     with rct_reader.RctReader('localhost', "8899") as reader:
         if unknown_size:
-            responses = reader.read_frame()
+            responses = reader.recv_frame()
         else:
-            responses = reader.read_frame(expected_frames)
+            responses = reader.recv_frame(expected_frames)
 
         assert len(responses) == expected_frames
         resp = responses[0]
@@ -175,7 +175,7 @@ def test_buffer_rewind(mock_socket, caplog):
     mock_socket.set_receive_data(test_packets)
 
     with rct_reader.RctReader('dummy', "dummy", buffer_size=128) as reader:
-        responses = reader.read_frame(expected_frames)
+        responses = reader.recv_frame(expected_frames)
 
         assert len(responses) == expected_frames
         resp = responses[0]
