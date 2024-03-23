@@ -4,11 +4,13 @@ import time
 from datetime import datetime, timedelta
 
 from rctclient.registry import REGISTRY as R
+from rctclient.types import DataType
 from rctclient.utils import decode_value
 from rctclient.exceptions import ReceiveFrameError
 from rct_reader import RctReader
 from influxdb_client import InfluxDBClient, Point
 
+# https://realpython.com/async-io-python/
 
 log = logging.getLogger(__name__)
 
@@ -59,8 +61,12 @@ def listen_only(rct_inverter_host: str, rct_inverter_port: str):
                     oid = R.get_by_id(frame.oid)
                     print(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
                     try:
-                        value = decode_value(oid.response_data_type, frame.payload)
-                        print(f'Value: {value}, type: {oid.response_data_type}')
+                        ftype = oid.response_data_type
+                        if ftype != DataType.UNKNOWN:
+                            value = decode_value(ftype, frame.payload)
+                        else:
+                            value = frame.payload.hex(' ')
+                        print(f'Value: {value}, type: {ftype}')
                     except KeyError as ex:
                         print(f'Error: Cannot decode value: {ex}')
             except TimeoutError:
