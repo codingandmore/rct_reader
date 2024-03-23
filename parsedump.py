@@ -1,5 +1,5 @@
+import argparse
 import logging
-import sys
 import rct_parser
 from rctclient.types import DataType
 from rctclient.utils import decode_value  # , encode_value
@@ -8,12 +8,21 @@ from rctclient.exceptions import InvalidCommand
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] == '-v':
+    parser = argparse.ArgumentParser(
+        prog='parsedump',
+        description='Read a file with captured frames and display parsed data',
+    )
+    parser.add_argument('-f', '--infile', help='file name of file with captured packages', required=True)
+    parser.add_argument('-v', '--verbose', help='enable debug logging', action='store_true')
+
+    parsed = parser.parse_args()
+
+    if parsed.verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.WARN)
 
-    with open('dump.bin', 'rb') as f:
+    with open(parsed.infile, 'rb') as f:
         frame_buffer = f.read()
     print(f'read {len(frame_buffer)} bytes')
     finished = False
