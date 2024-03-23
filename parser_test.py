@@ -2,6 +2,7 @@ import logging
 import rct_parser
 import rctclient.frame
 from rctclient.types import Command, FrameType, DataType
+from rctclient.registry import REGISTRY as Registry
 from rctclient.utils import decode_value, encode_value
 
 LOREM = '''Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed
@@ -241,6 +242,50 @@ def test_parser_incomplete_second_frame():
     assert res_frame.crc_ok
     value = decode_value(frame2.dataType, res_frame.payload)
     assert value == frame2.value
+
+
+def test_parser_escaped_value_in_second_frame():
+    frame1 = Frame()
+    intValue = 0x2B000102
+    frame2 = Frame(value=intValue)
+    test_bytes = frame1.make_frame() + frame1.make_frame() + frame2.make_frame()
+    mv = memoryview(test_bytes)
+    parser = check_response(frame1, test_bytes)
+    response_frame = parser.parse(mv)
+    assert parser.complete_frame
+    assert response_frame.crc_ok
+    value = decode_value(frame2.dataType, response_frame.payload)
+    assert value == frame1.value
+
+    # now the important part: check that frame with escaped byte one can be parsed
+    response_frame = parser.parse(mv)
+    assert parser.complete_frame
+    assert response_frame.crc_ok
+    value = decode_value(frame2.dataType, response_frame.payload)
+    assert value == intValue
+
+
+def test_parser_end_of_block():
+    frame = Frame()
+    test_frame = frame.make_frame() + bytes.fromhex('2b 2b 2b')
+    parser = check_response(frame, test_frame)
+    mv = memoryview(test_frame)
+    result_frame = parser.parse(mv)  # parse second part which is only end-of-block
+    assert not parser.complete_frame
+    assert result_frame is None
+
+
+def test_escaped_check_sum():
+    test_frame = bytes.fromhex('2B 05 06 36 23 D8 2A 00 02 D0 2D 2B')
+    parser = rct_parser.FrameParser()
+    frame = parser.parse(test_frame)
+    assert parser.complete_frame
+    assert frame.crc16 == 0xd02b
+    assert frame.crc_ok
+    oid = Registry.get_by_id(frame.oid)
+    ftype = oid.response_data_type
+    value = decode_value(ftype, frame.payload)
+    assert value == 2
 
 
 if __name__ == '__main__':

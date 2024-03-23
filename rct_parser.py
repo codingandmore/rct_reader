@@ -101,7 +101,7 @@ class FrameParser:
             new_buffer = new_buffer.tobytes()
             new_buffer = new_buffer[0:pos] + new_buffer[pos + 1:]
             new_buffer = memoryview(new_buffer)
-            self.escape_indexes.append(pos)
+            self.escape_indexes.append(pos + self.current_pos)
         return new_buffer
 
     def parse(self, buffer: memoryview) -> ResponseFrame:
@@ -133,8 +133,14 @@ class FrameParser:
                 if i > 0 and buffer[i - 1] == ESCAPE_TOKEN:
                     log.debug('escaped start token found, ignoring')
                 else:
-                    log.debug('start token found')
-                    start = i
+                    j = i + 1
+                    while j < length and buffer[j] == START_TOKEN:
+                        j += 1  # there are special "end of block" markers 2B 2B 2B" -> skip
+                    if j == i + 1:  # no more following 1Bs -> start token found
+                        log.debug('start token found')
+                        start = i
+                    else:
+                        i = j      # skip 1B sequence
             i += 1
 
         if start < 0:  # no start token found, exit
@@ -143,6 +149,7 @@ class FrameParser:
             self.complete_frame = False
             return None
 
+        start_token_pos = i - 1
         unescaped_buffer = memoryview(buffer)[start:]
         unescaped_buffer = self._unescape_buffer(unescaped_buffer)
         log.debug(f'Escaped buffer length: {len(unescaped_buffer)}: {unescaped_buffer.hex(" ")}',)
@@ -151,8 +158,9 @@ class FrameParser:
         i = 1  # index 0 is now start token
         log.debug(f'unescaped length: {length}')
 
-        c = unescaped_buffer[i]
-        log.debug(f'read: 0x{c:02x} at index {i}')
+        if i < length:
+            c = unescaped_buffer[i]
+            log.debug(f'read: 0x{c:02x} at index {i}')
 
         if length - i >= BUFFER_LEN_COMMAND:
             try:
@@ -212,9 +220,10 @@ class FrameParser:
 
             if not crc_ok and not self.ignore_crc_mismatch:
                 raise FrameCRCMismatch('CRC mismatch', crc16, calc_crc16, i)
-            log.debug(f'returning completed frame at {frame_length}')
-            self.current_pos += i + 2
+            self.current_pos = start_token_pos + i + 2
             self.complete_frame = True
+            log.debug(f'returning completed frame, len: {frame_length}, start pos: {start_token_pos}, '
+                f'next pos: {self.current_pos}')
             frame = ResponseFrame(
                 command=command,
                 oid=oid,
