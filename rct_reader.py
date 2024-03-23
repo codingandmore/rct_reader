@@ -2,6 +2,8 @@
 
 import logging
 import socket
+from typing import Callable
+
 from rctclient.frame import make_frame  # , ReceiveFrame
 from rctclient.registry import REGISTRY as R, ObjectInfo
 from rctclient.types import Command, DataType
@@ -35,6 +37,7 @@ class RctReader:
         self.timeout = timeout
         self.parser = FrameParser()
         self.sock = None
+        self.on_frame_received = None
         log.debug(f'Reader initialized with buffer size {buffer_size}')
 
     def __enter__(self):
@@ -47,6 +50,9 @@ class RctReader:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.sock.close()
         return False
+
+    def register_callback(self, fn: Callable[[ResponseFrame], None]):
+        self.on_frame_received = fn
 
     def read_frames_send_all_before_receive(self, oids: list[str]):
         result = []
@@ -142,6 +148,8 @@ class RctReader:
                     except KeyError as ex:
                         log.error(f'Error when decoding frame: {ex}')
                         responses.append(None)
+                if self.on_frame_received:
+                    self.on_frame_received(frame)
 
                 # if all bytes are consumed we can rewind buffer to read next chunk at buffer start:
                 if self.parser.current_pos == buffer_pos + bytes_read:

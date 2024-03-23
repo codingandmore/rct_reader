@@ -8,6 +8,7 @@ from rctclient.types import DataType
 from rctclient.utils import decode_value
 from rctclient.exceptions import ReceiveFrameError
 from rct_reader import RctReader
+from rct_parser import ResponseFrame
 from influxdb_client import InfluxDBClient, Point
 
 # https://realpython.com/async-io-python/
@@ -51,24 +52,29 @@ def get_units(oid_names: set[str]) -> dict[str, str]:
     return result
 
 
+def report_frame_callback(frame: ResponseFrame):
+    now = datetime.now()
+    oid = R.get_by_id(frame.oid)
+    ftype = oid.response_data_type
+    try:
+        if ftype != DataType.UNKNOWN:
+            value = decode_value(ftype, frame.payload)
+            print(f'{now.strftime("%H:%M:%S")}: Response {oid.name} ({oid.object_id}): '
+                  f'value: {value}, type: {ftype}')
+        else:
+            value = frame.payload.hex(' ')
+            print(f'{now.strftime("%H:%M:%S")}: Response with unknown type {oid.name} '
+                  f'({oid}): raw value: {value}')
+    except KeyError as ex:
+        print(f'Error: Cannot decode value: {ex}')
+
+
 def listen_only(rct_inverter_host: str, rct_inverter_port: str):
     with RctReader(rct_inverter_host, rct_inverter_port, timeout=30) as reader:
+        reader.register_callback(report_frame_callback)
         while True:
             try:
-                frames = reader.recv_frame()
-                print(f'Received {len(frames)} packets')
-                for frame in frames:
-                    oid = R.get_by_id(frame.oid)
-                    print(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
-                    try:
-                        ftype = oid.response_data_type
-                        if ftype != DataType.UNKNOWN:
-                            value = decode_value(ftype, frame.payload)
-                        else:
-                            value = frame.payload.hex(' ')
-                        print(f'Value: {value}, type: {ftype}')
-                    except KeyError as ex:
-                        print(f'Error: Cannot decode value: {ex}')
+                reader.recv_frame()
             except TimeoutError:
                 print('Timeout occured')
             except ReceiveFrameError as ex:
