@@ -4,7 +4,7 @@ import logging
 import socket
 from rctclient.frame import make_frame  # , ReceiveFrame
 from rctclient.registry import REGISTRY as R, ObjectInfo
-from rctclient.types import Command
+from rctclient.types import Command, DataType
 from rctclient.utils import decode_value
 from rct_parser import ResponseFrame
 from rct_parser import FrameParser
@@ -53,7 +53,7 @@ class RctReader:
         for oid in oids:
             oid = R.get_by_name(oid)
             send_frame = make_frame(command=Command.READ, id=oid.object_id)
-            logging.debug(f'Sending command {oid}')
+            log.debug(f'Sending command {oid}')
             self.sock.sendall(send_frame)
 
         self.read_frames(len(oids))
@@ -64,7 +64,7 @@ class RctReader:
         for oid in oids:
             oid = R.get_by_name(oid)
             send_frame = make_frame(command=Command.READ, id=oid.object_id)
-            logging.debug(f'Sending command {oid}')
+            log.debug(f'Sending command {oid}')
             self.sock.sendall(send_frame)
             result.append(self._read_frame(oid))
         return result
@@ -75,7 +75,7 @@ class RctReader:
 
     def _read_frame(self, oid: ObjectInfo) -> ResponseFrame:
         send_frame = make_frame(command=Command.READ, id=oid.object_id)
-        logging.debug(f'Sending command {oid}')
+        log.debug(f'Sending command {oid}')
         self.sock.sendall(send_frame)
         results = self.recv_frame(1)
         length = len(results)
@@ -108,55 +108,59 @@ class RctReader:
                 socket_buffer_view = memoryview(self.buffer)[buffer_pos:len(self.buffer)]
                 try:
                     bytes_read = self.sock.recv_into(socket_buffer_view, len(socket_buffer_view))
-                    logging.debug(f'read bytes from socket: {bytes_read} to {buffer_pos}')
+                    log.debug(f'read bytes from socket: {bytes_read} to {buffer_pos}')
                 except TimeoutError:
-                    logging.debug('Timeout, exiting recv')
+                    log.debug('Timeout, exiting recv')
                     break
                 if bytes_read == 0:
-                    logging.debug(f'Disconnect with {len(responses)} response frames')
+                    log.debug(f'Disconnect with {len(responses)} response frames')
                     return responses  # no more data available, connection closed
 
                 # create a new memory view for parser and reset pos:
-                logging.debug(f'creating memory view from {buffer_pos} to {buffer_pos + bytes_read}')
+                log.debug(f'creating memory view from {buffer_pos} to {buffer_pos + bytes_read}')
                 mv = memoryview(self.buffer)[0:buffer_pos + bytes_read]
 
             # try to parse next frame
             frame = self.parser.parse(mv)
-            logging.debug(f'Parser complete: {self.parser.complete_frame}')
+            log.debug(f'Parser complete: {self.parser.complete_frame}')
             if self.parser.complete_frame:
                 frames_received += 1
                 if no_frames > 0:
-                    logging.debug(f'Received {frames_received}, expected: {no_frames}')
+                    log.debug(f'Received {frames_received}, expected: {no_frames}')
                     continue_parsing = frames_received < no_frames
 
                 oid = R.get_by_id(frame.oid)
-                logging.debug(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
-                try:
-                    value = decode_value(oid.response_data_type, frame.payload)
-                    logging.debug(f'Value: {value}, type: {oid.response_data_type}')
-                    responses.append(frame)
-                except KeyError as ex:
-                    logging.error(f'Error when decoding frame: {ex}')
-                    responses.append(None)
+                log.debug(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
+                if log.getEffectiveLevel() == logging.DEBUG:
+                    try:
+                        if oid.response_data_type != DataType.UNKNOWN:
+                            value = decode_value(oid.response_data_type, frame.payload)
+                        else:
+                            value = frame.payload.hex(' ')
+                        log.debug(f'Value: {value}, type: {oid.response_data_type}')
+                        responses.append(frame)
+                    except KeyError as ex:
+                        log.error(f'Error when decoding frame: {ex}')
+                        responses.append(None)
 
                 # if all bytes are consumed we can rewind buffer to read next chunk at buffer start:
                 if self.parser.current_pos == buffer_pos + bytes_read:
-                    logging.debug('Rewinding buffer')
+                    log.debug('Rewinding buffer')
                     buffer_pos = 0
                     bytes_read = 0
                     self.parser.rewinded()
 
             # rewind buffer if it fills up and copy remaining data then
             if buffer_pos + bytes_read > len(self.buffer) / 2:
-                logging.debug("Enforce rewind, potential overflow")
+                log.debug("Enforce rewind, potential overflow")
                 pos = self.parser.current_pos
                 remaining_bytes = len(mv) - pos
-                logging.debug(f'rewind buffer: {bytes_read=}, {pos=}, {len(mv)=}, {remaining_bytes=}')
+                log.debug(f'rewind buffer: {bytes_read=}, {pos=}, {len(mv)=}, {remaining_bytes=}')
                 self.buffer[0:remaining_bytes] = mv[pos:]
                 self.parser.rewinded()
                 buffer_pos = 0
                 bytes_read = len(mv) - pos
                 mv = memoryview(self.buffer)[0:remaining_bytes]
 
-        logging.debug("Finished parsing")
+        log.debug("Finished parsing")
         return responses
