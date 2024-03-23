@@ -94,11 +94,25 @@ def send_command(command: str, rct_inverter_host: str, rct_inverter_port: str):
             print(f'Value: {value}, type: {oid.response_data_type}')
 
 
+def monitor_inverter_influx(
+    rct_inverter_host: str,
+    rct_inverter_port: str = '8899',
+    influx_host: str = None,
+    influx_port: str = '8899',
+):
+    influx_url: str = f'http://{influx_host}{influx_port}',
+    username = "admin"
+    password = "admin"
+
+    with InfluxDBClient(url=influx_url, token=f'{username}:{password}', org='-') as influx:
+        with influx.write_api() as write_api:
+            monitor_inverter(rct_inverter_host, rct_inverter_port, write_api)
+
+
 def monitor_inverter(
     rct_inverter_host: str,
     rct_inverter_port: str = '8899',
-    influx_url: str = 'http://localhost:8086',
-    use_db: bool = True,
+    write_api=None,
 ):
     short_interval_readings = {
         'dc_conv.dc_conv_struct[0].p_dc': 'power_panel_0',
@@ -129,49 +143,49 @@ def monitor_inverter(
 
     bucket = 'photovoltaic/autogen'
 
-    username = "admin"
-    password = "admin"
     interval_short = timedelta(seconds=5)
     interval_long = timedelta(minutes=5)
     last_time_long = datetime.now() - interval_long
     readings: dict[str, any] = {}
-    use_db = False
 
-    with InfluxDBClient(url=influx_url, token=f'{username}:{password}', org='-') as influx:
-        with influx.write_api() as write_api:
-            with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512) as reader:
-                while True:
-                    print("Reading...")
-                    start = datetime.now()
-                    readings = read_oid_set(reader, short_interval_readings.keys())
+    with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512) as reader:
+        while True:
+            print("Reading...")
+            start = datetime.now()
+            readings = read_oid_set(reader, short_interval_readings.keys())
 
-                    if use_db:
-                        point = Point("pv")
-                        #     .tag("inverter", "RCT") \
-                        #     .field("power_panels", values[0]) \
-                        #     .field("charge_battery", values[3]) \
-                        #     .field("power_grid", values[2]) \
-                        #     .field("energy_daily", values[1])
-                        write_api.write(bucket=bucket, record=point)
+            print('Summary Short Readings:')
+            for k, v in readings.items():
+                print(f'{readings[k]}: {v}{units[k]}')
+            print('----')
 
-                    print('Summary Short Readings:')
-                    for k, v in short_interval_readings.items():
-                        print(f'{v}: {readings[k]}{units[k]}')
-                    print('----')
+            if write_api:
+                point = Point("pv").tag("inverter", "RCT")
 
-                    if start - last_time_long >= interval_long:
-                        # read long lived values...
-                        readings = read_oid_set(reader, long_interval_readings.keys())
-                        print('Summary Long  Readings:')
-                        for k, v in long_interval_readings.items():
-                            print(f'{v}: {readings[k]}{units[k]}')
-                        print('----')
-                        last_time_long = start
+                for k, v in short_interval_readings.items():
+                    if k in readings:
+                        point = point.field(v, readings[k])
+                write_api.write(bucket=bucket, record=point)
 
-                    end = datetime.now()
-                    remaining = (interval_short - (end - start)).seconds
-                    if remaining > 0:
-                        time.sleep(remaining)
+            if start - last_time_long >= interval_long:
+                # read long lived values...
+                readings = read_oid_set(reader, long_interval_readings.keys())
+                print('Summary Long Readings:')
+                for k, v in readings.items():
+                    print(f'{v}: {readings[k]}{units[k]}')
+
+                if write_api:
+                    for k, v in long_interval_readings.items():
+                        if k in readings:
+                            point = point.field(v, readings[k])
+                    write_api.write(bucket=bucket, record=point)
+                print('----')
+                last_time_long = start
+
+            end = datetime.now()
+            remaining = (interval_short - (end - start)).seconds
+            if remaining > 0:
+                time.sleep(remaining)
 
 
 def main():
@@ -183,7 +197,8 @@ def main():
     parser.add_argument('--host', help='host-name or IP of device', required=True)
     parser.add_argument('--port', default=8899, help='Port to connect to, default 8899',
               metavar='<port>')
-    parser.add_argument('--no-db', help='do not write into database', action='store_true')
+    parser.add_argument('--influx-host', help='host of influxdb database')
+    parser.add_argument('--influx-port', help='port of influxdb database')
     parser.add_argument('--listen-only', help='debug do not send commands', action='store_true')
     parser.add_argument('--command', help='send single command to device')
     parser.add_argument('-v', '--verbose', help='enable debug logging', action='store_true')
@@ -206,11 +221,19 @@ def main():
             print(f'Stop reading: Frame read error received: {ex}')
 
     else:
-        monitor_inverter(
-            rct_inverter_host=parsed.host,
-            rct_inverter_port=parsed.port,
-            use_db=not parsed.no_db
-        )
+        if parsed.influx_host:
+            monitor_inverter_influx(
+                rct_inverter_host=parsed.host,
+                rct_inverter_port=parsed.port,
+                influx_host=parsed.influx_host,
+                influx_port=parsed.influx_port,
+            )
+        else:
+            monitor_inverter(
+                rct_inverter_host=parsed.host,
+                rct_inverter_port=parsed.port,
+
+            )
 
 
 if __name__ == '__main__':
