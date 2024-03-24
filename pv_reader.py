@@ -18,31 +18,23 @@ log = logging.getLogger(__name__)
 
 def read_oid_set(reader: RctReader, oid_set) -> dict[str, any]:
     readings: dict[str, any] = {}
-    oids = list(oid_set)
-    frames = reader.read_frames(oids)
-    print('Set complete.')
-    i = 0
+    frames = reader.read_frames(oid_set)
+    print(f'Set complete len: {len(frames)}.')
     for frame in frames:
         if frame is None:
-            print("Error no response received")
+            print("Error: no response received")
         elif frame.crc_ok:
-            oid = R.get_by_id(frame.oid)
-            requested = R.get_by_name(oids[i])
-            value = decode_value(oid.response_data_type, frame.payload)
-            if requested.object_id == frame.oid:
-                # print(f'{oid.name} ({oid.description}): {value}, type: '
-                #         f'{oid.response_data_type}')
-                readings[requested.name] = value
+            oi = R.get_by_id(frame.oid)
+            if oi.response_data_type != DataType.UNKNOWN:
+                value = decode_value(oi.response_data_type, frame.payload)
             else:
-                req_oid = R.get_by_name(oids[i])
-                print(f'Warning: device returned not requested data: {req_oid.name} '
-                        f'({req_oid.description}), got: {oid.name} ({oid.description} value: '
-                        f'{value}. Ignoring value.')
-                readings[requested.name] = None
+                value = None
         else:
             print("Error wrong crc!")
-            readings[oids[i]] = None
-        i += 1
+            value = None
+
+        readings[oi.name] = value
+    print(f'Readings complete len: {len(readings)}.')
     return readings
 
 
@@ -117,8 +109,8 @@ def monitor_inverter(
     write_api=None,
 ):
     short_interval_readings = {
-        'dc_conv.dc_conv_struct[0].p_dc': 'power_panel_0',
-        'dc_conv.dc_conv_struct[1].p_dc': 'power_panel_1',
+        'dc_conv.dc_conv_struct[0].p_dc_lp': 'power_panel_0',
+        'dc_conv.dc_conv_struct[1].p_dc_lp': 'power_panel_1',
         'g_sync.p_ac_load_sum_lp': 'power_used',
         'g_sync.p_ac_grid_sum_lp': 'power_grid',
         'g_sync.p_ac_load[0]': 'power_phase_0',
@@ -150,40 +142,43 @@ def monitor_inverter(
     last_time_long = datetime.now() - interval_long
     readings: dict[str, any] = {}
 
-    with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512) as reader:
+    with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0, ignore_crc=True) as reader:
         while True:
             print("Reading...")
             start = datetime.now()
-            readings = read_oid_set(reader, short_interval_readings.keys())
+            try:
+                readings = read_oid_set(reader, short_interval_readings.keys())
 
-            print('Summary Short Readings:')
-            for k, v in readings.items():
-                print(f'{k}: {v}')
-            print('----')
-
-            if write_api:
-                point = Point("pv").tag("inverter", "RCT")
-
-                for k, v in short_interval_readings.items():
-                    if k in readings:
-                        point = point.field(v, readings[k])
-                write_api.write(bucket=bucket, record=point)
-
-            if start - last_time_long >= interval_long:
-                # read long lived values...
-                readings = read_oid_set(reader, long_interval_readings.keys())
-                print('Summary Long Readings:')
+                now = datetime.now()
+                print(f'{now.strftime("%H:%M:%S")}: Summary Short Readings:')
                 for k, v in readings.items():
                     print(f'{k}: {v}')
+                print('----')
 
                 if write_api:
-                    for k, v in long_interval_readings.items():
+                    point = Point("pv").tag("inverter", "RCT")
+
+                    for k, v in short_interval_readings.items():
                         if k in readings:
                             point = point.field(v, readings[k])
                     write_api.write(bucket=bucket, record=point)
-                print('----')
-                last_time_long = start
 
+                # if start - last_time_long >= interval_long:
+                #     # read long lived values...
+                #     readings = read_oid_set(reader, long_interval_readings.keys())
+                #     print('Summary Long Readings:')
+                #     for k, v in readings.items():
+                #         print(f'{k}: {v}')
+
+                #     if write_api:
+                #         for k, v in long_interval_readings.items():
+                #             if k in readings:
+                #                 point = point.field(v, readings[k])
+                #         write_api.write(bucket=bucket, record=point)
+                #     print('----')
+                #     last_time_long = start
+            except TimeoutError:
+                log.error("Timeout when readying, retrying next time")
             end = datetime.now()
             remaining = (interval_short - (end - start)).seconds
             if remaining > 0:

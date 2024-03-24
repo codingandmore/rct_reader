@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import select
 import socket
 from typing import Callable
 
@@ -28,14 +29,86 @@ log = logging.getLogger(__name__)
 # copy bytearray: buffer1[:] = buffer2
 # Documentation: https://rctclient.readthedocs.io/
 
+predefined_readings = {
+    'battery.stored_energy',
+    'battery.used_energy',
+    'battery.voltage',
+    'battery.bms_software_version',
+    'battery.bms_sn',
+    'g_sync.p_acc_lp',
+    'battery.soc',
+    'battery.temperature',
+    'dc_conv.dc_conv_struct[0].u_sg_lp',
+    'dc_conv.dc_conv_struct[1].u_sg_lp',
+    'dc_conv.dc_conv_struct[0].p_dc_lp',
+    'dc_conv.dc_conv_struct[1].p_dc_lp',
+    'energy.e_ext_total',
+    'fault[0].flt',
+    'fault[1].flt',
+    'fault[2].flt',
+    'fault[3].flt',
+    'buf_v_control.power_reduction_max_solar_grid',
+    'energy.e_grid_feed_total',
+    'energy.e_grid_load_total',
+    'g_sync.p_ac_load_sum_lp',
+    'energy.e_load_total',
+    'g_sync.i_dr_eff[0]',
+    'g_sync.i_dr_eff[1]',
+    'g_sync.i_dr_eff[2]',
+    'g_sync.u_l_rms[0]',
+    'g_sync.u_l_rms[1]',
+    'g_sync.u_l_rms[2]',
+    'g_sync.p_ac_grid_sum_lp',
+    'grid_pll[0].f',
+    'energy.e_dc_total[0]',
+    'energy.e_dc_total[1]',
+    'energy.e_ac_total',
+    'io_board.s0_external_power',
+    'energy.e_ac_day',
+    'battery.stack_software_version[0]',
+    'battery.stack_software_version[1]',
+    'battery.stack_software_version[2]',
+    'battery.stack_software_version[3]',
+    'battery.stack_software_version[4]',
+    'battery.stack_software_version[5]',
+    'battery.stack_software_version[6]',
+    'energy.e_dc_day[0]',
+    'energy.e_dc_day[1]',
+    'energy.e_ext_day',
+    'energy.e_grid_feed_day',
+    'energy.e_grid_load_day',
+    'energy.e_load_day',
+    'prim_sm.island_flag',
+    'parameter_file',
+    'net.slave_data'
+}
+
+
+def map_to_ids(oid_names: set[str]) -> set[int]:
+    result = set()
+    for name in oid_names:
+        result.add(R.get_by_name(name).object_id)
+    return result
+
+
+predefined_readings_ids = map_to_ids(predefined_readings)
+
+
 class RctReader:
-    def __init__(self, host: str, port: str, timeout: float = 3.0, buffer_size: int = 2048):
+    def __init__(
+            self,
+            host: str,
+            port: str,
+            timeout: float = 3.0,
+            buffer_size: int = 2048,
+            ignore_crc: bool = False
+    ):
         self.buffer = bytearray(buffer_size)
         self.start = 0
         self.host = host
         self.port = port
         self.timeout = timeout
-        self.parser = FrameParser()
+        self.parser = FrameParser(ignore_crc)
         self.sock = None
         self.on_frame_received = None
         log.debug(f'Reader initialized with buffer size {buffer_size}')
@@ -65,37 +138,63 @@ class RctReader:
         self.read_frames(len(oids))
         return result
 
-    def read_frames(self, oids: list[str]) -> list[ResponseFrame]:
+    def read_frames(self, oid_names: set[str]) -> list[ResponseFrame]:
+        frames_to_request = oid_names - predefined_readings
+        needed_ids = map_to_ids(oid_names)
+        print(f'required commands: {frames_to_request}')
+        for x in needed_ids:
+            print(f'needed id: 0x{x:02x}')
         result = []
-        for oid in oids:
-            oid = R.get_by_name(oid)
-            send_frame = make_frame(command=Command.READ, id=oid.object_id)
-            log.debug(f'Sending command {oid}')
-            self.sock.sendall(send_frame)
+        for oid_name in oid_names:  # frames_to_request:
+            oid = R.get_by_name(oid_name)
+            log.debug(f'Sending command {oid_name}')
             result.append(self._read_frame(oid))
+
+        print(f'received needed frame len wanted: {len(oid_names)} len actual: {len(result)}')
         return result
+
+        # receive remaining packets until all requested ids are collected
+        # while len(result) < len(oid_names):
+        #     result.append(self._read_frame(None, needed_ids))
+        #     print(f'received needed frame len wanted: {len(oid_names)} len actual: {len(result)}')
+        # return result
 
     def read_frame(self, oid_name: str) -> ResponseFrame:
         oid = R.get_by_name(oid_name)
         return self._read_frame(oid)
 
-    def _read_frame(self, oid: ObjectInfo) -> ResponseFrame:
+    def _read_frame(self, oid: ObjectInfo, wanted_ids: set[int] = None) -> ResponseFrame:
         def on_received(frame: ResponseFrame):
             nonlocal response_frame
-            print(f'received frame {frame.oid}')
-            if frame.oid == oid.object_id:
+            print(f'received frame 0x{frame.oid:02x}')
+            if frame.oid in wanted_ids:
                 print('wanted')
                 response_frame = frame
             else:
                 log.debug("discarding unwanted frame")
 
+        if wanted_ids is None:
+            wanted_ids = {oid.object_id}
         response_frame = None
-        send_frame = make_frame(command=Command.READ, id=oid.object_id)
-        log.debug(f'Sending command {oid.name}')
         self.register_callback(on_received)
-        self.sock.sendall(send_frame)
+        if oid:
+            send_frame = make_frame(command=Command.READ, id=oid.object_id)
+            log.debug(f'Sending command {oid.name}')
+            print(f'Sending command {oid.name}')
+            # # discard pending bytes before sending new command
+            # to_read, _, _ = select.select([self.sock], [], [], 0)
+            # if to_read:
+            #     req_len = 1024
+            #     recvd_len = req_len
+            #     while to_read:
+            #         data = self.sock.recv(req_len)
+            #         recvd_len = len(data)
+            #         print(f'discarding recv: {recvd_len=}')
+            #         to_read, _, _ = select.select([self.sock], [], [], 0)
+            #     print('done discarding')
+            self.sock.sendall(send_frame)
         while not response_frame:
-            self.recv_frame(0)
+            self.recv_frame(1)
         return response_frame
 
     def recv_frame(self, no_frames: int = 0) -> list[ResponseFrame]:
@@ -120,8 +219,8 @@ class RctReader:
                     bytes_read = self.sock.recv_into(socket_buffer_view, len(socket_buffer_view))
                     log.debug(f'read bytes from socket: {bytes_read} to {buffer_pos}')
                 except TimeoutError:
-                    log.debug('Timeout, exiting recv')
-                    break
+                    log.warning('Timeout, exiting recv')
+                    raise
                 if bytes_read == 0:
                     log.debug(f'Disconnect with {len(responses)} response frames')
                     return responses  # no more data available, connection closed
