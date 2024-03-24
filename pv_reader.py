@@ -19,22 +19,22 @@ log = logging.getLogger(__name__)
 def read_oid_set(reader: RctReader, oid_set) -> dict[str, any]:
     readings: dict[str, any] = {}
     frames = reader.read_frames(oid_set)
-    print(f'Set complete len: {len(frames)}.')
     for frame in frames:
         if frame is None:
-            print("Error: no response received")
+            log.error("Error: no response received")
         elif frame.crc_ok:
             oi = R.get_by_id(frame.oid)
             if oi.response_data_type != DataType.UNKNOWN:
                 value = decode_value(oi.response_data_type, frame.payload)
+                value = round(value, 1)
             else:
                 value = None
         else:
-            print("Error wrong crc!")
+            log.error("Error wrong crc in response!")
             value = None
 
         readings[oi.name] = value
-    print(f'Readings complete len: {len(readings)}.')
+    log.debug(f'Readings complete len: {len(readings)}.')
     return readings
 
 
@@ -109,8 +109,8 @@ def monitor_inverter(
     write_api=None,
 ):
     short_interval_readings = {
-        'dc_conv.dc_conv_struct[0].p_dc_lp': 'power_panel_0',
-        'dc_conv.dc_conv_struct[1].p_dc_lp': 'power_panel_1',
+        'dc_conv.dc_conv_struct[0].p_dc': 'power_panel_0',
+        'dc_conv.dc_conv_struct[1].p_dc': 'power_panel_1',
         'g_sync.p_ac_load_sum_lp': 'power_used',
         'g_sync.p_ac_grid_sum_lp': 'power_grid',
         'g_sync.p_ac_load[0]': 'power_phase_0',
@@ -142,7 +142,8 @@ def monitor_inverter(
     last_time_long = datetime.now() - interval_long
     readings: dict[str, any] = {}
 
-    with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0, ignore_crc=True) as reader:
+    with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0,
+                   ignore_crc=True) as reader:
         while True:
             print("Reading...")
             start = datetime.now()
@@ -152,7 +153,7 @@ def monitor_inverter(
                 now = datetime.now()
                 print(f'{now.strftime("%H:%M:%S")}: Summary Short Readings:')
                 for k, v in readings.items():
-                    print(f'{k}: {v}')
+                    print(f'{k}: {v} {units[k]}')
                 print('----')
 
                 if write_api:
@@ -163,23 +164,26 @@ def monitor_inverter(
                             point = point.field(v, readings[k])
                     write_api.write(bucket=bucket, record=point)
 
-                # if start - last_time_long >= interval_long:
-                #     # read long lived values...
-                #     readings = read_oid_set(reader, long_interval_readings.keys())
-                #     print('Summary Long Readings:')
-                #     for k, v in readings.items():
-                #         print(f'{k}: {v}')
+                if start - last_time_long >= interval_long:
+                    # read long lived values...
+                    readings = read_oid_set(reader, long_interval_readings.keys())
+                    now = datetime.now()
+                    print(f'{now.strftime("%H:%M:%S")}: Summary Long Readings:')
+                    for k, v in readings.items():
+                        print(f'{k}: {v}{units[k]}')
 
-                #     if write_api:
-                #         for k, v in long_interval_readings.items():
-                #             if k in readings:
-                #                 point = point.field(v, readings[k])
-                #         write_api.write(bucket=bucket, record=point)
-                #     print('----')
-                #     last_time_long = start
+                    if write_api:
+                        for k, v in long_interval_readings.items():
+                            if k in readings:
+                                point = point.field(v, readings[k])
+                        write_api.write(bucket=bucket, record=point)
+                    print('----')
+                    last_time_long = start
+                end = datetime.now()
             except TimeoutError:
-                log.error("Timeout when readying, retrying next time")
-            end = datetime.now()
+                now = datetime.now()
+                log.error(f'{now.strftime("%H:%M:%S")}: Timeout when readying, retrying now')
+                end = start + interval_short  # immediately retry again
             remaining = (interval_short - (end - start)).seconds
             if remaining > 0:
                 time.sleep(remaining)
