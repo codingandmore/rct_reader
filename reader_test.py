@@ -187,4 +187,3 @@ def test_buffer_rewind(mock_socket, caplog):
         resp = responses[2]
         value = decode_value(bat_cycles_objinfo.response_data_type, resp.payload)
         assert value == bat_cycles_value
-

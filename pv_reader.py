@@ -20,23 +20,25 @@ def read_oid_set(reader: RctReader, oid_set) -> dict[str, any]:
     readings: dict[str, any] = {}
     oids = list(oid_set)
     frames = reader.read_frames(oids)
+    print('Set complete.')
     i = 0
     for frame in frames:
         if frame is None:
             print("Error no response received")
         elif frame.crc_ok:
             oid = R.get_by_id(frame.oid)
-            req_oid = R.get_by_name(oids[i])
+            requested = R.get_by_name(oids[i])
             value = decode_value(oid.response_data_type, frame.payload)
-            if req_oid == oid:
+            if requested.object_id == frame.oid:
                 # print(f'{oid.name} ({oid.description}): {value}, type: '
                 #         f'{oid.response_data_type}')
-                readings[oids[i]] = value
+                readings[requested.name] = value
             else:
+                req_oid = R.get_by_name(oids[i])
                 print(f'Warning: device returned not requested data: {req_oid.name} '
                         f'({req_oid.description}), got: {oid.name} ({oid.description} value: '
                         f'{value}. Ignoring value.')
-                readings[oids[i]] = None
+                readings[requested.name] = None
         else:
             print("Error wrong crc!")
             readings[oids[i]] = None
@@ -156,7 +158,7 @@ def monitor_inverter(
 
             print('Summary Short Readings:')
             for k, v in readings.items():
-                print(f'{readings[k]}: {v}{units[k]}')
+                print(f'{k}: {v}')
             print('----')
 
             if write_api:
@@ -172,7 +174,7 @@ def monitor_inverter(
                 readings = read_oid_set(reader, long_interval_readings.keys())
                 print('Summary Long Readings:')
                 for k, v in readings.items():
-                    print(f'{v}: {readings[k]}{units[k]}')
+                    print(f'{k}: {v}')
 
                 if write_api:
                     for k, v in long_interval_readings.items():

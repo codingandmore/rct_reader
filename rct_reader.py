@@ -80,19 +80,23 @@ class RctReader:
         return self._read_frame(oid)
 
     def _read_frame(self, oid: ObjectInfo) -> ResponseFrame:
+        def on_received(frame: ResponseFrame):
+            nonlocal response_frame
+            print(f'received frame {frame.oid}')
+            if frame.oid == oid.object_id:
+                print('wanted')
+                response_frame = frame
+            else:
+                log.debug("discarding unwanted frame")
+
+        response_frame = None
         send_frame = make_frame(command=Command.READ, id=oid.object_id)
-        log.debug(f'Sending command {oid}')
+        log.debug(f'Sending command {oid.name}')
+        self.register_callback(on_received)
         self.sock.sendall(send_frame)
-        results = self.recv_frame(1)
-        length = len(results)
-        if length == 1:
-            return results[0]
-        elif length == 0:
-            log.error('Did not receive response frame')
-            return None
-        else:
-            log.warning("Received more than one response, using first one   ")
-            return results[0]
+        while not response_frame:
+            self.recv_frame(0)
+        return response_frame
 
     def recv_frame(self, no_frames: int = 0) -> list[ResponseFrame]:
         # query information about an object ID (here: battery.soc):
@@ -138,18 +142,19 @@ class RctReader:
                 oid = R.get_by_id(frame.oid)
                 log.debug(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
                 if log.getEffectiveLevel() == logging.DEBUG:
-                    try:
-                        if oid.response_data_type != DataType.UNKNOWN:
+                    if oid.response_data_type != DataType.UNKNOWN:
+                        try:
                             value = decode_value(oid.response_data_type, frame.payload)
-                        else:
+                        except KeyError as ex:
+                            log.debug(f'Error when decoding frame: {ex}')
                             value = frame.payload.hex(' ')
-                        log.debug(f'Value: {value}, type: {oid.response_data_type}')
-                        responses.append(frame)
-                    except KeyError as ex:
-                        log.error(f'Error when decoding frame: {ex}')
-                        responses.append(None)
+                    else:
+                        value = frame.payload.hex(' ')
+                    log.debug(f'Value: {value}, type: {oid.response_data_type}')
                 if self.on_frame_received:
                     self.on_frame_received(frame)
+                else:
+                    responses.append(frame)
 
                 # if all bytes are consumed we can rewind buffer to read next chunk at buffer start:
                 if self.parser.current_pos == buffer_pos + bytes_read:
