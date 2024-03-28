@@ -84,6 +84,8 @@ log = logging.getLogger(__name__)
 #     'net.slave_data'
 # }
 
+MAX_FRAME_SIZE = 1024
+
 
 class RctReader:
     def __init__(
@@ -117,17 +119,6 @@ class RctReader:
 
     def register_callback(self, fn: Callable[[ResponseFrame], None]):
         self.on_frame_received = fn
-
-    def read_frames_send_all_before_receive(self, oids: list[str]):
-        result = []
-        for oid in oids:
-            oid = R.get_by_name(oid)
-            send_frame = make_frame(command=Command.READ, id=oid.object_id)
-            log.debug(f'Sending command {oid}')
-            self.sock.sendall(send_frame)
-
-        self.read_frames(len(oids))
-        return result
 
     def read_frames(self, oid_names: set[str]) -> list[ResponseFrame]:
         result = []
@@ -229,7 +220,7 @@ class RctReader:
                     self.parser.rewinded()
 
             # rewind buffer if it fills up and copy remaining data then
-            if buffer_pos + bytes_read > len(self.buffer) / 2:
+            if buffer_pos + bytes_read > len(self.buffer) - MAX_FRAME_SIZE:
                 log.debug("Enforce rewind, potential overflow")
                 pos = self.parser.current_pos
                 remaining_bytes = len(mv) - pos

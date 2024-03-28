@@ -9,7 +9,7 @@ from rctclient.utils import decode_value
 from rctclient.exceptions import ReceiveFrameError
 from rct_reader import RctReader
 from rct_parser import ResponseFrame
-from influxdb_client import InfluxDBClient, Point
+from influxdb_client import InfluxDBClient, Point, WriteApi
 
 # https://realpython.com/async-io-python/
 
@@ -25,10 +25,14 @@ def read_oid_set(reader: RctReader, oid_set) -> dict[str, any]:
         elif frame.crc_ok:
             oi = R.get_by_id(frame.oid)
             if oi.response_data_type != DataType.UNKNOWN:
-                value = decode_value(oi.response_data_type, frame.payload)
-                value = round(value, 1)
+                try:
+                    value = decode_value(oi.response_data_type, frame.payload)
+                except ValueError:
+                    value = frame.payload.hex(' ')
+                if isinstance(value, (int, float)):
+                    value = round(value, 1)
             else:
-                value = None
+                value = frame.payload.hex(' ')
         else:
             log.error("Error wrong crc in response!")
             value = None
@@ -36,6 +40,28 @@ def read_oid_set(reader: RctReader, oid_set) -> dict[str, any]:
         readings[oi.name] = value
     log.debug(f'Readings complete len: {len(readings)}.')
     return readings
+
+
+def read_oid(reader: RctReader, oid: str) -> tuple[str, any]:
+    frame = reader.read_frame(oid)
+    if frame is None:
+        log.error("Error: no response received")
+    elif frame.crc_ok:
+        oi = R.get_by_id(frame.oid)
+        if oi.response_data_type != DataType.UNKNOWN:
+            try:
+                value = decode_value(oi.response_data_type, frame.payload)
+            except ValueError:
+                value = frame.payload.hex(' ')
+
+            if isinstance(value, (int, float)):
+                value = round(value, 1)
+            return (oi.name, value)
+        else:
+            return oi.name, frame.payload.hex(' ')
+    else:
+        log.error("Error wrong crc in response!")
+        return oid, None
 
 
 def get_units(oid_names: set[str]) -> dict[str, str]:
@@ -94,7 +120,7 @@ def monitor_inverter_influx(
     influx_host: str = None,
     influx_port: str = '8899',
 ):
-    influx_url: str = f'http://{influx_host}{influx_port}',
+    influx_url: str = f'http://{influx_host}:{influx_port}'
     username = "admin"
     password = "admin"
 
@@ -106,7 +132,7 @@ def monitor_inverter_influx(
 def monitor_inverter(
     rct_inverter_host: str,
     rct_inverter_port: str = '8899',
-    write_api=None,
+    write_api: WriteApi = None,
 ):
     short_interval_readings = {
         'dc_conv.dc_conv_struct[0].p_dc': 'power_panel_0',
@@ -122,12 +148,14 @@ def monitor_inverter(
 
     long_interval_readings = {
         'battery.soc': 'charge_battery',
+        'battery.soc_target': 'charge_battery_target',
         'power_mng.amp_hours': 'battery_amp_hours',
         'battery.voltage': 'battery_voltage',
         'prim_sm.island_flag': 'grid_separated',
         'energy.e_ac_day': 'day_energy',
         'energy.e_ac_total': 'total_energy',
-        'energy.e_grid_load_day': 'day_energy_grid',
+        'energy.e_grid_feed_day_sum': 'day_energy_grid_feed',
+        'energy.e_grid_load_day': 'day_energy_grid_load',
         'energy.e_dc_day[0]': 'day_energy_panel_0',
         'energy.e_dc_day[1]': 'day_energy_panel_1',
     }
@@ -138,7 +166,7 @@ def monitor_inverter(
     bucket = 'photovoltaic/autogen'
 
     interval_short = timedelta(seconds=5)
-    interval_long = timedelta(minutes=5)
+    interval_long = timedelta(minutes=1)
     last_time_long = datetime.now() - interval_long
     readings: dict[str, any] = {}
 
@@ -182,11 +210,39 @@ def monitor_inverter(
                 end = datetime.now()
             except TimeoutError:
                 now = datetime.now()
-                log.error(f'{now.strftime("%H:%M:%S")}: Timeout when readying, retrying now')
+                log.error(f'{now.strftime("%H:%M:%S")}: Timeout when reading, retrying now')
                 end = start + interval_short  # immediately retry again
+            except BaseException as ex:  # pylint: disable=broad-exception-caught
+                now = datetime.now()
+                log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}')
+
             remaining = (interval_short - (end - start)).seconds
             if remaining > 0:
                 time.sleep(remaining)
+
+
+def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
+    all_params = [x.name for x in R.all()]
+    units = get_units(all_params)
+
+    with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0,
+                   ignore_crc=True) as reader:
+        print(f'Reading {len(all_params)} values...')
+        for oid_name in all_params:
+            now = datetime.now()
+            retries = 3
+            retry = 0
+            success = False
+            while not success and retry < retries:
+                try:
+                    log.error(f'{now.strftime("%H:%M:%S")}: Timeout, retrying {retry}/{retries}')
+                    name, value = read_oid(reader, oid_name)
+                    print(f'{name}: {value} {units[name]}')
+                    success = True
+                except TimeoutError:
+                    time.sleep(1.0 * (retry + 1))
+                    retry += 1
+                    print('Timeout.')
 
 
 def main():
@@ -201,6 +257,7 @@ def main():
     parser.add_argument('--influx-host', help='host of influxdb database')
     parser.add_argument('--influx-port', help='port of influxdb database')
     parser.add_argument('--listen-only', help='debug do not send commands', action='store_true')
+    parser.add_argument('--read-all', help='read all values from inverter', action='store_true')
     parser.add_argument('--command', help='send single command to device')
     parser.add_argument('-v', '--verbose', help='enable debug logging', action='store_true')
 
@@ -229,11 +286,12 @@ def main():
                 influx_host=parsed.influx_host,
                 influx_port=parsed.influx_port,
             )
+        elif parsed.read_all:
+            read_all_values(parsed.host, parsed.port)
         else:
             monitor_inverter(
                 rct_inverter_host=parsed.host,
                 rct_inverter_port=parsed.port,
-
             )
 
 
