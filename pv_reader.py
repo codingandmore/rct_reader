@@ -190,6 +190,9 @@ def monitor_inverter(
                     for k, v in short_interval_readings.items():
                         if k in readings:
                             point = point.field(v, readings[k])
+                    point = point.field('power_panel', readings['dc_conv.dc_conv_struct[0].p_dc'] +
+                                            readings['dc_conv.dc_conv_struct[1].p_dc'])
+                    print('writing to InfluxDB')
                     write_api.write(bucket=bucket, record=point)
 
                 if start - last_time_long >= interval_long:
@@ -212,9 +215,10 @@ def monitor_inverter(
                 now = datetime.now()
                 log.error(f'{now.strftime("%H:%M:%S")}: Timeout when reading, retrying now')
                 end = start + interval_short  # immediately retry again
-            except BaseException as ex:  # pylint: disable=broad-exception-caught
-                now = datetime.now()
-                log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}')
+            # except BaseException as ex:  # pylint: disable=broad-exception-caught
+            #     now = datetime.now()
+            #     end = now
+            #     log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}')
 
             remaining = (interval_short - (end - start)).seconds
             if remaining > 0:
