@@ -1,4 +1,5 @@
 
+from datetime import datetime
 from rctclient.types import Command, FrameType
 from rctclient.utils import CRC16
 from rctclient.exceptions import FrameCRCMismatch, InvalidCommand  # , FrameLengthExceeded
@@ -104,6 +105,16 @@ class FrameParser:
             self.escape_indexes.append(pos + self.current_pos)
         return new_buffer
 
+    def log_state_into_file(self, buffer: memoryview):
+        now = datetime.now()
+        fname = f'{now.strftime("%Y:%m:%d-%H:%M:%S")}-parserstate.log'
+        with open(fname, 'w', encoding='utf-8') as f:
+            f.write(f'Buffer Length: {buffer}\n')
+            f.write(f'Current pos: {self.current_pos}\n')
+            f.write('Buffer:\n')
+            f.write('{buffer.hex(" "}')
+            f.write(f'Escape Indexes: {self.escape_indexes}')
+
     def parse(self, buffer: memoryview) -> ResponseFrame:
         frame: ResponseFrame = None
         frame_type: FrameType = None
@@ -166,6 +177,7 @@ class FrameParser:
             try:
                 command = Command(c)
             except ValueError as exc:
+                self.log_state_into_file(buffer)
                 raise InvalidCommand(str(exc), c, i) from exc
 
             if command == Command.EXTENSION:
