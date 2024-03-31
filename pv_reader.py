@@ -2,6 +2,7 @@ import argparse
 import logging
 import time
 from datetime import datetime, timedelta
+import traceback
 
 from rctclient.registry import REGISTRY as R
 from rctclient.types import DataType
@@ -79,14 +80,14 @@ def report_frame_callback(frame: ResponseFrame):
     try:
         if ftype != DataType.UNKNOWN:
             value = decode_value(ftype, frame.payload)
-            print(f'{now.strftime("%H:%M:%S")}: Response {oid.name} ({oid.object_id}): '
+            log.info(f'{now.strftime("%H:%M:%S")}: Response {oid.name} ({oid.object_id}): '
                   f'value: {value}, type: {ftype}')
         else:
             value = frame.payload.hex(' ')
-            print(f'{now.strftime("%H:%M:%S")}: Response with unknown type {oid.name} '
+            log.info(f'{now.strftime("%H:%M:%S")}: Response with unknown type {oid.name} '
                   f'({oid}): raw value: {value}')
     except KeyError as ex:
-        print(f'Error: Cannot decode value: {ex}')
+        log.error(f'Error: Cannot decode value: {ex}')
 
 
 def listen_only(rct_inverter_host: str, rct_inverter_port: str):
@@ -103,15 +104,15 @@ def listen_only(rct_inverter_host: str, rct_inverter_port: str):
 
 def send_command(command: str, rct_inverter_host: str, rct_inverter_port: str):
     with RctReader(rct_inverter_host, rct_inverter_port) as reader:
-        print(f'Sending command {command}')
+        log.info(f'Sending command {command}')
         frame = reader.read_frame(command)
         if frame is None:
-            print("Error no response received")
+            log.error("Error no response received")
         else:
             oid = R.get_by_id(frame.oid)
-            print(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
+            log.info(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
             value = decode_value(oid.response_data_type, frame.payload)
-            print(f'Value: {value}, type: {oid.response_data_type}')
+            log.info(f'Value: {value}, type: {oid.response_data_type}')
 
 
 def monitor_inverter_influx(
@@ -174,16 +175,16 @@ def monitor_inverter(
     with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0,
                    ignore_crc=True) as reader:
         while True:
-            print("Reading...")
+            log.info("Reading...")
             start = datetime.now()
             try:
                 readings = read_oid_set(reader, short_interval_readings.keys())
 
                 now = datetime.now()
-                print(f'{now.strftime("%H:%M:%S")}: Summary Short Readings:')
+                log.info(f'{now.strftime("%H:%M:%S")}: Summary Short Readings:')
                 for k, v in readings.items():
-                    print(f'{k}: {v} {units[k]}')
-                print('----')
+                    log.info(f'{k}: {v} {units[k]}')
+                log.info('----')
 
                 if write_api:
                     point = Point("pv").tag("inverter", "RCT")
@@ -193,23 +194,23 @@ def monitor_inverter(
                             point = point.field(v, readings[k])
                     point = point.field('power_panel', readings['dc_conv.dc_conv_struct[0].p_dc'] +
                                             readings['dc_conv.dc_conv_struct[1].p_dc'])
-                    print('writing to InfluxDB')
+                    log.info('writing to InfluxDB')
                     write_api.write(bucket=bucket, record=point)
 
                 if start - last_time_long >= interval_long:
                     # read long lived values...
                     readings = read_oid_set(reader, long_interval_readings.keys())
                     now = datetime.now()
-                    print(f'{now.strftime("%H:%M:%S")}: Summary Long Readings:')
+                    log.info(f'{now.strftime("%H:%M:%S")}: Summary Long Readings:')
                     for k, v in readings.items():
-                        print(f'{k}: {v}{units[k]}')
+                        log.info(f'{k}: {v}{units[k]}')
 
                     if write_api:
                         for k, v in long_interval_readings.items():
                             if k in readings:
                                 point = point.field(v, readings[k])
                         write_api.write(bucket=bucket, record=point)
-                    print('----')
+                    log.info('----')
                     last_time_long = start
                 end = datetime.now()
             except TimeoutError:
@@ -219,7 +220,8 @@ def monitor_inverter(
             except BaseException as ex:  # pylint: disable=broad-exception-caught
                 now = datetime.now()
                 end = now
-                log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}')
+                log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}', exc_info=True)
+                traceback.print_exc()
 
             remaining = (interval_short - (end - start)).seconds
             if remaining > 0:
@@ -232,7 +234,7 @@ def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
 
     with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0,
                    ignore_crc=True) as reader:
-        print(f'Reading {len(all_params)} values...')
+        log.info(f'Reading {len(all_params)} values...')
         for oid_name in all_params:
             now = datetime.now()
             retries = 3
@@ -242,12 +244,12 @@ def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
                 try:
                     log.error(f'{now.strftime("%H:%M:%S")}: Timeout, retrying {retry}/{retries}')
                     name, value = read_oid(reader, oid_name)
-                    print(f'{name}: {value} {units[name]}')
+                    log.info(f'{name}: {value} {units[name]}')
                     success = True
                 except TimeoutError:
                     time.sleep(1.0 * (retry + 1))
                     retry += 1
-                    print('Timeout.')
+                    log.error('Timeout.')
 
 
 def main():
