@@ -216,10 +216,10 @@ def monitor_inverter(
                 now = datetime.now()
                 log.error(f'{now.strftime("%H:%M:%S")}: Timeout when reading, retrying now')
                 end = start + interval_short  # immediately retry again
-            # except BaseException as ex:  # pylint: disable=broad-exception-caught
-            #     now = datetime.now()
-            #     end = now
-            #     log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}')
+            except BaseException as ex:  # pylint: disable=broad-exception-caught
+                now = datetime.now()
+                end = now
+                log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}')
 
             remaining = (interval_short - (end - start)).seconds
             if remaining > 0:
