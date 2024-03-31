@@ -254,4 +254,5 @@ class FrameParser:
         for escape_index in self.escape_indexes:
             if self.current_pos >= escape_index:
                 self.current_pos += 1
+                break
         return frame
