@@ -104,6 +104,7 @@ class RctReader:
         self.parser = FrameParser(ignore_crc)
         self.sock = None
         self.on_frame_received = None
+        self.rewind_threshold = min(MAX_FRAME_SIZE, buffer_size / 2)
         log.debug(f'Reader initialized with buffer size {buffer_size}')
 
     def __enter__(self):
@@ -220,7 +221,7 @@ class RctReader:
                     self.parser.rewinded()
 
             # rewind buffer if it fills up and copy remaining data then
-            if buffer_pos + bytes_read > len(self.buffer) - MAX_FRAME_SIZE:
+            if buffer_pos + bytes_read > len(self.buffer) - self.rewind_threshold:
                 log.debug("Enforce rewind, potential overflow")
                 pos = self.parser.current_pos
                 remaining_bytes = len(mv) - pos
