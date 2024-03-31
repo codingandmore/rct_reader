@@ -153,6 +153,7 @@ def monitor_inverter(
         'battery.voltage': 'battery_voltage',
         'prim_sm.island_flag': 'grid_separated',
         'energy.e_ac_day': 'day_energy',
+        'energy.e_load_day': 'day_energy_used',
         'energy.e_ac_total': 'total_energy',
         'energy.e_grid_feed_day_sum': 'day_energy_grid_feed',
         'energy.e_grid_load_day': 'day_energy_grid_load',
