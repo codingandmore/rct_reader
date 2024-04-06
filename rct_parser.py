@@ -105,15 +105,16 @@ class FrameParser:
             self.escape_indexes.append(pos + self.current_pos)
         return new_buffer
 
-    def log_state_into_file(self, buffer: memoryview):
+    def log_state_into_file(self, msg: str, buffer: memoryview):
         now = datetime.now()
         fname = f'{now.strftime("%Y:%m:%d-%H:%M:%S")}-parserstate.log'
         with open(fname, 'w', encoding='utf-8') as f:
+            f.write(f'Exception: {msg}\n')
             f.write(f'Buffer Length: {buffer}\n')
             f.write(f'Current pos: {self.current_pos}\n')
             f.write('Buffer:\n')
-            f.write('{buffer.hex(" "}')
-            f.write(f'Escape Indexes: {self.escape_indexes}')
+            f.write(f'{buffer.hex(" ")}\n')
+            f.write(f'Escape Indexes: {self.escape_indexes}\n')
 
     def parse(self, buffer: memoryview) -> ResponseFrame:
         frame: ResponseFrame = None
@@ -177,7 +178,7 @@ class FrameParser:
             try:
                 command = Command(c)
             except ValueError as exc:
-                self.log_state_into_file(buffer)
+                self.log_state_into_file(str(exc), buffer)
                 raise InvalidCommand(str(exc), c, i) from exc
 
             if command == Command.EXTENSION:

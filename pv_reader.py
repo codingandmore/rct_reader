@@ -2,7 +2,6 @@ import argparse
 import logging
 import time
 from datetime import datetime, timedelta
-import traceback
 
 from rctclient.registry import REGISTRY as R
 from rctclient.types import DataType
@@ -136,15 +135,15 @@ def monitor_inverter(
     write_api: WriteApi = None,
 ):
     short_interval_readings = {
-        'dc_conv.dc_conv_struct[0].p_dc': 'power_panel_0',
-        'dc_conv.dc_conv_struct[1].p_dc': 'power_panel_1',
-        'g_sync.p_ac_load_sum_lp': 'power_used',
-        'g_sync.p_ac_grid_sum_lp': 'power_grid',
-        'g_sync.p_ac_load[0]': 'power_phase_0',
-        'g_sync.p_ac_load[1]': 'power_phase_1',
-        'g_sync.p_ac_load[2]': 'power_phase_2',
-        'g_sync.p_acc_lp': 'power_battery',
-        'grid_pll[0].f': 'grid_frequency',
+        'dc_conv.dc_conv_struct[0].p_dc': 'power_panel_0',  # Power panel 0 (W)
+        'dc_conv.dc_conv_struct[1].p_dc': 'power_panel_1',  # Power panel 1 (W)
+        'g_sync.p_ac_load_sum_lp': 'power_used',            # Power household (W)
+        'g_sync.p_ac_grid_sum_lp': 'power_grid',            # Power grid (W)
+        'g_sync.p_ac_load[0]': 'power_phase_0',             # Power household phase 0 (W)
+        'g_sync.p_ac_load[1]': 'power_phase_1',             # Power household phase 1 (W)
+        'g_sync.p_ac_load[2]': 'power_phase_2',             # Power household phase 2 (W)
+        'g_sync.p_acc_lp': 'power_battery',                 # Power battery (W)
+        'grid_pll[0].f': 'grid_frequency',                  # Grid frequency (Hz)
     }
 
     long_interval_readings = {
@@ -152,14 +151,16 @@ def monitor_inverter(
         'battery.soc_target': 'charge_battery_target',
         'power_mng.amp_hours': 'battery_amp_hours',
         'battery.voltage': 'battery_voltage',
+        'battery.used_energy': 'battery_used_energy',
+        'battery.stored_energy': 'battery_stored_energy',
         'prim_sm.island_flag': 'grid_separated',
-        'energy.e_ac_day': 'day_energy',
-        'energy.e_load_day': 'day_energy_used',
+        'energy.e_ac_day': 'day_energy',                       # Day energy produced (Wh)
+        'energy.e_load_day': 'day_energy_used',                # Household day energy (Wh)
         'energy.e_ac_total': 'total_energy',
-        'energy.e_grid_feed_day_sum': 'day_energy_grid_feed',
-        'energy.e_grid_load_day': 'day_energy_grid_load',
-        'energy.e_dc_day[0]': 'day_energy_panel_0',
-        'energy.e_dc_day[1]': 'day_energy_panel_1',
+        'energy.e_grid_feed_day_sum': 'day_energy_grid_feed',  # Day energy fed into grid (Wh)
+        'energy.e_grid_load_day': 'day_energy_grid_load',      # Day energy consumed from grid (Wh)
+        'energy.e_dc_day[0]': 'day_energy_panel_0',            # Day energy produced string 0 (Wh)
+        'energy.e_dc_day[1]': 'day_energy_panel_1',            # Day energy produced string 1 (Wh)
     }
 
     units = get_units(short_interval_readings.keys())
@@ -172,60 +173,71 @@ def monitor_inverter(
     last_time_long = datetime.now() - interval_long
     readings: dict[str, any] = {}
 
-    with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0,
-                   ignore_crc=True) as reader:
-        while True:
-            log.info("Reading...")
-            start = datetime.now()
-            try:
-                readings = read_oid_set(reader, short_interval_readings.keys())
+    while True:
+        retries: int = 0
+        max_retries: int = 5
 
-                now = datetime.now()
-                log.info(f'{now.strftime("%H:%M:%S")}: Summary Short Readings:')
-                for k, v in readings.items():
-                    log.info(f'{k}: {v} {units[k]}')
-                log.info('----')
+        with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0,
+                    ignore_crc=True) as reader:
+            while retries < max_retries:
+                log.info("Reading...")
+                start = datetime.now()
+                try:
+                    readings = read_oid_set(reader, short_interval_readings.keys())
 
-                if write_api:
-                    point = Point("pv").tag("inverter", "RCT")
-
-                    for k, v in short_interval_readings.items():
-                        if k in readings:
-                            point = point.field(v, readings[k])
-                    point = point.field('power_panel', readings['dc_conv.dc_conv_struct[0].p_dc'] +
-                                            readings['dc_conv.dc_conv_struct[1].p_dc'])
-                    log.info('writing to InfluxDB')
-                    write_api.write(bucket=bucket, record=point)
-
-                if start - last_time_long >= interval_long:
-                    # read long lived values...
-                    readings = read_oid_set(reader, long_interval_readings.keys())
                     now = datetime.now()
-                    log.info(f'{now.strftime("%H:%M:%S")}: Summary Long Readings:')
+                    log.info(f'{now.strftime("%H:%M:%S")}: Summary Short Readings:')
                     for k, v in readings.items():
-                        log.info(f'{k}: {v}{units[k]}')
+                        log.info(f'{k}: {v} {units[k]}')
+                    log.info('----')
 
                     if write_api:
-                        for k, v in long_interval_readings.items():
+                        point = Point("pv").tag("inverter", "RCT")
+
+                        for k, v in short_interval_readings.items():
                             if k in readings:
                                 point = point.field(v, readings[k])
+                        point = point.field('power_panel', readings['dc_conv.dc_conv_struct[0].p_dc'] +
+                                                readings['dc_conv.dc_conv_struct[1].p_dc'])
+                        log.info('writing to InfluxDB')
                         write_api.write(bucket=bucket, record=point)
-                    log.info('----')
-                    last_time_long = start
-                end = datetime.now()
-            except TimeoutError:
-                now = datetime.now()
-                log.error(f'{now.strftime("%H:%M:%S")}: Timeout when reading, retrying now')
-                end = start + interval_short  # immediately retry again
-            except BaseException as ex:  # pylint: disable=broad-exception-caught
-                now = datetime.now()
-                end = now
-                log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}', exc_info=True)
-                traceback.print_exc()
+                        retries = 0
 
-            remaining = (interval_short - (end - start)).seconds
-            if remaining > 0:
-                time.sleep(remaining)
+                    if start - last_time_long >= interval_long:
+                        # read long lived values...
+                        readings = read_oid_set(reader, long_interval_readings.keys())
+                        now = datetime.now()
+                        log.info(f'{now.strftime("%H:%M:%S")}: Summary Long Readings:')
+                        for k, v in readings.items():
+                            log.info(f'{k}: {v}{units[k]}')
+
+                        if write_api:
+                            for k, v in long_interval_readings.items():
+                                if k in readings:
+                                    point = point.field(v, readings[k])
+                            write_api.write(bucket=bucket, record=point)
+                        log.info('----')
+                        last_time_long = start
+                        retries = 0
+                    end = datetime.now()
+                except TimeoutError:
+                    now = datetime.now()
+                    log.error(f'{now.strftime("%H:%M:%S")}: Timeout when reading, retrying now')
+                    time.sleep(1.0)
+                    end = start + interval_short  # immediately retry again
+                    retries += 1
+                except BaseException as ex:  # pylint: disable=broad-exception-caught
+                    now = datetime.now()
+                    end = now
+                    retries += 1
+                    log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}', exc_info=True)
+
+                remaining = (interval_short - (end - start)).seconds
+                if remaining > 0:
+                    time.sleep(remaining)
+        log.error(f'max retries {retries} exceeded, reconnecting in 5s')
+        time.sleep(5.0)
+        log.error('reconnecting')
 
 
 def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
@@ -269,10 +281,17 @@ def main():
     parser.add_argument('-v', '--verbose', help='enable debug logging', action='store_true')
 
     parsed = parser.parse_args()
+
     if parsed.verbose:
-        logging.basicConfig(level=logging.DEBUG)
+        logLevel = logging.DEBUG
     else:
-        logging.basicConfig(level=logging.WARNING)
+        logLevel = logging.WARNING
+
+    logging.basicConfig(
+        level=logLevel,
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 
     if parsed.command:
         send_command(parsed.command, parsed.host, parsed.port)

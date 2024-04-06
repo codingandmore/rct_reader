@@ -8,6 +8,7 @@ from rctclient.frame import make_frame  # , ReceiveFrame
 from rctclient.registry import REGISTRY as R, ObjectInfo
 from rctclient.types import Command, DataType
 from rctclient.utils import decode_value
+from rctclient.exceptions import FrameError
 from rct_parser import ResponseFrame
 from rct_parser import FrameParser
 
@@ -85,6 +86,18 @@ log = logging.getLogger(__name__)
 # }
 
 MAX_FRAME_SIZE = 1024
+
+
+class InvalidOidError(FrameError):
+    '''
+    Unknown OID Received in frame.
+
+    :param message: A message describing the error.
+    :param consumed_bytes: How many bytes were consumed.
+    '''
+    def __init__(self, message: str, consumed_bytes: int = 0) -> None:
+        super().__init__(message)
+        self.consumed_bytes = consumed_bytes
 
 
 class RctReader:
@@ -196,18 +209,23 @@ class RctReader:
                     log.debug(f'Received {frames_received}, expected: {no_frames}')
                     continue_parsing = frames_received < no_frames
 
-                oid = R.get_by_id(frame.oid)
-                log.debug(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
-                if log.getEffectiveLevel() == logging.DEBUG:
-                    if oid.response_data_type != DataType.UNKNOWN:
-                        try:
-                            value = decode_value(oid.response_data_type, frame.payload)
-                        except KeyError as ex:
-                            log.debug(f'Error when decoding frame: {ex}')
+                try:
+                    oid = R.get_by_id(frame.oid)
+                    log.debug(f'Response frame received: {oid}, crc ok: {frame.crc_ok}')
+                    if log.getEffectiveLevel() == logging.DEBUG:
+                        if oid.response_data_type != DataType.UNKNOWN:
+                            try:
+                                value = decode_value(oid.response_data_type, frame.payload)
+                            except KeyError as ex:
+                                log.debug(f'Error when decoding frame: {ex}')
+                                value = frame.payload.hex(' ')
+                        else:
                             value = frame.payload.hex(' ')
-                    else:
-                        value = frame.payload.hex(' ')
-                    log.debug(f'Value: {value}, type: {oid.response_data_type}')
+                        log.debug(f'Value: {value}, type: {oid.response_data_type}')
+                except KeyError as ex:
+                    msg = f'Unknown OID received: {frame.oid:04x}'
+                    self.parser.log_state_into_file(msg, mv)
+                    raise InvalidOidError(msg) from ex
                 if self.on_frame_received:
                     self.on_frame_received(frame)
                 else:
