@@ -1,6 +1,9 @@
 import argparse
 import logging
 import time
+import traceback
+import signal
+import sys
 from datetime import datetime, timedelta
 
 from rctclient.registry import REGISTRY as R
@@ -263,8 +266,16 @@ def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
                     retry += 1
                     log.error('Timeout.')
 
+def print_stacktrace(sig, frame):
+    traceback.print_stack()
+    sys.exit(1)
+
+
+def listen():
+    signal.signal(signal.SIGTERM, print_stacktrace)  # Register handler
 
 def main():
+    listen()
     # HF-A21.fritz.box
     parser = argparse.ArgumentParser(
         prog='rct-reader',
