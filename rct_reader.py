@@ -119,6 +119,7 @@ class RctReader:
         self.on_frame_received = None
         self.rewind_threshold = min(MAX_FRAME_SIZE, buffer_size / 2)
         log.debug(f'Reader initialized with buffer size {buffer_size}')
+        self.server_closed_conn = False
 
     def __enter__(self):
         # open the socket and connect to the remote device:
@@ -137,9 +138,10 @@ class RctReader:
     def read_frames(self, oid_names: set[str]) -> list[ResponseFrame]:
         result = []
         for oid_name in oid_names:  # frames_to_request:
-            oid = R.get_by_name(oid_name)
-            log.debug(f'Sending command {oid_name}')
-            result.append(self._read_frame(oid))
+            if not self.server_closed_conn:
+                oid = R.get_by_name(oid_name)
+                log.debug(f'Sending command {oid_name}')
+                result.append(self._read_frame(oid))
 
         return result
 
@@ -164,7 +166,7 @@ class RctReader:
             send_frame = make_frame(command=Command.READ, id=oid.object_id)
             log.debug(f'Sending command {oid.name}')
             self.sock.sendall(send_frame)
-        while not response_frame:
+        while not response_frame and not self.server_closed_conn:
             self.recv_frame(1)
         return response_frame
 
@@ -193,7 +195,8 @@ class RctReader:
                     log.warning('Timeout, exiting recv')
                     raise
                 if bytes_read == 0:
-                    log.debug(f'Disconnect with {len(responses)} response frames')
+                    log.error(f'Disconnect with {len(responses)} response frames')
+                    self.server_closed_conn = True
                     return responses  # no more data available, connection closed
 
                 # create a new memory view for parser and reset pos:

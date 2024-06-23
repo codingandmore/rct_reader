@@ -13,6 +13,8 @@ from rctclient.exceptions import ReceiveFrameError
 from rct_reader import RctReader
 from rct_parser import ResponseFrame
 from influxdb_client import InfluxDBClient, Point, WriteApi
+from influxdb_client.client.write_api import SYNCHRONOUS
+import urllib3
 
 # https://realpython.com/async-io-python/
 
@@ -23,6 +25,7 @@ def read_oid_set(reader: RctReader, oid_set) -> dict[str, any]:
     readings: dict[str, any] = {}
     frames = reader.read_frames(oid_set)
     for frame in frames:
+        value = None
         if frame is None:
             log.error("Error: no response received")
         elif frame.crc_ok:
@@ -36,11 +39,10 @@ def read_oid_set(reader: RctReader, oid_set) -> dict[str, any]:
                     value = round(value, 1)
             else:
                 value = frame.payload.hex(' ')
+            readings[oi.name] = value
         else:
             log.error("Error wrong crc in response!")
-            value = None
 
-        readings[oi.name] = value
     log.debug(f'Readings complete len: {len(readings)}.')
     return readings
 
@@ -127,9 +129,15 @@ def monitor_inverter_influx(
     username = "admin"
     password = "admin"
 
-    with InfluxDBClient(url=influx_url, token=f'{username}:{password}', org='-') as influx:
-        with influx.write_api() as write_api:
-            monitor_inverter(rct_inverter_host, rct_inverter_port, write_api)
+    while True:
+        try:
+            with InfluxDBClient(url=influx_url, token=f'{username}:{password}', org='-') as influx:
+                with influx.write_api(write_options=SYNCHRONOUS) as write_api:
+                    monitor_inverter(rct_inverter_host, rct_inverter_port, write_api)
+        except urllib3.exceptions.HTTPError as ex:
+            log.error(f'HTTP error when writing to database: {ex}')
+            time.sleep(15.0)
+            log.error('Reconnecting to InfluxDB')
 
 
 def monitor_inverter(
@@ -175,72 +183,81 @@ def monitor_inverter(
     interval_long = timedelta(minutes=1)
     last_time_long = datetime.now() - interval_long
     readings: dict[str, any] = {}
+    read_retries: int = 0
+    connect_retries: int = 0
+    max_retries: int = 5
 
-    while True:
-        retries: int = 0
-        max_retries: int = 5
+    while connect_retries < max_retries:
+        try:
+            with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0,
+                        ignore_crc=True) as reader:
+                read_retries = 0
+                while read_retries < max_retries and not reader.server_closed_conn:
+                    log.info("Reading...")
+                    start = datetime.now()
+                    try:
+                        readings = read_oid_set(reader, short_interval_readings.keys())
 
-        with RctReader(rct_inverter_host, rct_inverter_port, buffer_size=512, timeout=3.0,
-                    ignore_crc=True) as reader:
-            while retries < max_retries:
-                log.info("Reading...")
-                start = datetime.now()
-                try:
-                    readings = read_oid_set(reader, short_interval_readings.keys())
-
-                    now = datetime.now()
-                    log.info(f'{now.strftime("%H:%M:%S")}: Summary Short Readings:')
-                    for k, v in readings.items():
-                        log.info(f'{k}: {v} {units[k]}')
-                    log.info('----')
-
-                    if write_api:
-                        point = Point("pv").tag("inverter", "RCT")
-
-                        for k, v in short_interval_readings.items():
-                            if k in readings:
-                                point = point.field(v, readings[k])
-                        point = point.field('power_panel', readings['dc_conv.dc_conv_struct[0].p_dc'] +
-                                                readings['dc_conv.dc_conv_struct[1].p_dc'])
-                        log.info('writing to InfluxDB')
-                        write_api.write(bucket=bucket, record=point)
-                        retries = 0
-
-                    if start - last_time_long >= interval_long:
-                        # read long lived values...
-                        readings = read_oid_set(reader, long_interval_readings.keys())
                         now = datetime.now()
-                        log.info(f'{now.strftime("%H:%M:%S")}: Summary Long Readings:')
+                        log.info(f'{now.strftime("%H:%M:%S")}: Summary Short Readings:')
                         for k, v in readings.items():
-                            log.info(f'{k}: {v}{units[k]}')
+                            log.info(f'{k}: {v} {units[k]}')
+                        log.info('----')
 
-                        if write_api:
-                            for k, v in long_interval_readings.items():
+                        if readings and write_api:
+                            point = Point("pv").tag("inverter", "RCT")
+
+                            for k, v in short_interval_readings.items():
                                 if k in readings:
                                     point = point.field(v, readings[k])
+                            point = point.field('power_panel', readings['dc_conv.dc_conv_struct[0].p_dc'] +
+                                                    readings['dc_conv.dc_conv_struct[1].p_dc'])
+                            log.info('writing to InfluxDB')
                             write_api.write(bucket=bucket, record=point)
-                        log.info('----')
-                        last_time_long = start
-                        retries = 0
-                    end = datetime.now()
-                except TimeoutError:
-                    now = datetime.now()
-                    log.error(f'{now.strftime("%H:%M:%S")}: Timeout when reading, retrying now')
-                    time.sleep(1.0)
-                    end = start + interval_short  # immediately retry again
-                    retries += 1
-                except BaseException as ex:  # pylint: disable=broad-exception-caught
-                    now = datetime.now()
-                    end = now
-                    retries += 1
-                    log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}', exc_info=True)
+                            read_retries = 0
 
-                remaining = (interval_short - (end - start)).seconds
-                if remaining > 0:
-                    time.sleep(remaining)
-        log.error(f'max retries {retries} exceeded, reconnecting in 5s')
-        time.sleep(5.0)
+                        if start - last_time_long >= interval_long:
+                            # read long lived values...
+                            readings = read_oid_set(reader, long_interval_readings.keys())
+                            now = datetime.now()
+                            log.info(f'{now.strftime("%H:%M:%S")}: Summary Long Readings:')
+                            for k, v in readings.items():
+                                log.info(f'{k}: {v}{units[k]}')
+
+                            if readings and write_api:
+                                for k, v in long_interval_readings.items():
+                                    if k in readings:
+                                        point = point.field(v, readings[k])
+                                write_api.write(bucket=bucket, record=point)
+                            log.info('----')
+                            last_time_long = start
+                            read_retries = 0
+                        end = datetime.now()
+                    except TimeoutError:
+                        now = datetime.now()
+                        log.error(f'{now.strftime("%H:%M:%S")}: Timeout when reading, retrying now')
+                        time.sleep(1.0)
+                        end = start + interval_short  # immediately retry again
+                        read_retries += 1
+                    except BaseException as ex:  # pylint: disable=broad-exception-caught
+                        now = datetime.now()
+                        end = now
+                        read_retries += 1
+                        log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}', exc_info=True)
+
+                    remaining = (interval_short - (end - start)).seconds
+                    if remaining > 0:
+                        time.sleep(remaining)
+                retries = 0
+                if reader.server_closed_conn:
+                    log.error("Server closed connection, reconnecting in 5s")
+                else:
+                    log.error(f'max retries {retries} exceeded, reconnecting in {5.0 * retries}s')
+        except Exception as ex:
+            log.error(f'Error when connecting to inverter: {ex}')
+        time.sleep(5.0 * retries)
         log.error('reconnecting')
+    raise Exception('Aborting program, too many attempts to connect to connect to inverter.')
 
 
 def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
