@@ -253,11 +253,11 @@ def monitor_inverter(
                     log.error("Server closed connection, reconnecting in 5s")
                 else:
                     log.error(f'max retries {retries} exceeded, reconnecting in {5.0 * retries}s')
-        except Exception as ex:
+        except Exception as ex:   # pylint: disable=broad-exception-caught
             log.error(f'Error when connecting to inverter: {ex}')
         time.sleep(5.0 * retries)
         log.error('reconnecting')
-    raise Exception('Aborting program, too many attempts to connect to connect to inverter.')
+    raise RuntimeError('Aborting program, too many attempts to connect to connect to inverter.')
 
 
 def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
@@ -283,13 +283,15 @@ def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
                     retry += 1
                     log.error('Timeout.')
 
-def print_stacktrace(sig, frame):
+
+def print_stacktrace(_sig, _frame):
     traceback.print_stack()
     sys.exit(1)
 
 
 def listen():
     signal.signal(signal.SIGTERM, print_stacktrace)  # Register handler
+
 
 def main():
     listen()
