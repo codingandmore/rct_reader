@@ -178,7 +178,7 @@ class FrameParser:
             try:
                 command = Command(c)
             except ValueError as exc:
-                self.log_state_into_file(str(exc), buffer)
+                # self.log_state_into_file(str(exc), buffer)
                 raise InvalidCommand(str(exc), c, i) from exc
 
             if command == Command.EXTENSION:

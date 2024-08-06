@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import datetime, timedelta
 import logging
 import socket
 from typing import Callable
@@ -156,18 +157,28 @@ class RctReader:
                 log.debug('received wanted frame')
                 response_frame = frame
             else:
-                log.debug("discarding unwanted frame")
+                log.debug(f'discarding unwanted frame: {oid.name}')
+                if datetime.now() - request_time > timedelta(seconds=5):
+                    log.error('Waiting for more then 5s for response, risk of no data!')
 
         if wanted_ids is None:
             wanted_ids = {oid.object_id}
         response_frame = None
+        request_time = 0
         self.register_callback(on_received)
         if oid:
             send_frame = make_frame(command=Command.READ, id=oid.object_id)
             log.debug(f'Sending command {oid.name}')
+            request_time = datetime.now()
             self.sock.sendall(send_frame)
-        while not response_frame and not self.server_closed_conn:
+        time_command_sent = datetime.now()
+        command_timeout = timedelta(seconds=10)
+        while (not response_frame and not
+               self.server_closed_conn and
+               datetime.now() - time_command_sent <= command_timeout):
             self.recv_frame(1)
+        if datetime.now() - time_command_sent > command_timeout:
+            log.error(f"Giving up waiting for response for {oid.name}, no response within {command_timeout}s")
         return response_frame
 
     def recv_frame(self, no_frames: int = 0) -> list[ResponseFrame]:
@@ -227,7 +238,7 @@ class RctReader:
                         log.debug(f'Value: {value}, type: {oid.response_data_type}')
                 except KeyError as ex:
                     msg = f'Unknown OID received: {frame.oid:04x}'
-                    self.parser.log_state_into_file(msg, mv)
+                    # self.parser.log_state_into_file(msg, mv)
                     raise InvalidOidError(msg) from ex
                 if self.on_frame_received:
                     self.on_frame_received(frame)
