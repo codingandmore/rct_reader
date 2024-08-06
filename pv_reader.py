@@ -245,8 +245,8 @@ def monitor_inverter(
                         read_retries += 1
                         log.error(f'{now.strftime("%H:%M:%S")}: General exception {ex}', exc_info=True)
 
-                    remaining = (interval_short - (end - start)).seconds
-                    if remaining > 0:
+                    if end - start < interval_short:
+                        remaining = (interval_short - (end - start)).total_seconds()
                         time.sleep(remaining)
                 retries = 0
                 if reader.server_closed_conn:
