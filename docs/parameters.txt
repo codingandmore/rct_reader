@@ -1,0 +1,41 @@
+app dashboard
+dc_conv.dc_conv_struct[0].p_dc_lp       Solar Generator A power
+prim_sm.state                           Inverter status (enum) (see Inverter)
+battery.soc                             Battery State of Charge
+battery.soc_target                      Target State of Charge
+g_sync.p_acc_lp                         Battery Power (negative for discharge)
+g_sync.p_ac_load_sum_lp                 Load household  W
+g_sync.p_ac_grid_sum_lp                 Total grid power (see Power grid)
+
+App Tabelle:
+Day energy [kWh]   energy.e_ac_day
+Month energy [kW]  energy.e_ac_month
+Year energy [kWh]  energy.e_ac_year
+Total energy [MWh] energy.e_ac_total
+
+Load household - external Power[W]  g_sync.p_ac_load_sum_lp
+Load household phase [W]            g_sync.p_ac_load[0] 0,1, 2
+
+Total grid power [W]  g_sync.p_ac_grid_sum_lp
+Grid frequency [Hz]   grid_pll[0].f
+
+
+g_sync.p_ac_load_sum_lp W 69.9       Load household  W
+
+
+Day Energy kWh
+
+energy.e_load_day: 2787.8            Household day energy Wh ???
+energy.e_ac_day: 17138.1             Inverter Day Energy Wh
+
+energy.e_dc_day_sum[0]: 9449.7       Solar generator A day energy'
+energy.e_dc_day[1]: 9793.1
+
+energy.e_grid_feed_day_sum: -14211.
+
+energy.e_ac_day_sum: 16984.3
+energy.e_ac_day: 17138.1
+energy.e_dc_day[0]: 9524.3
+energy.e_dc_day[1]: 9793.1
+energy.e_dc_day_sum[0]: 9449.7
+energy.e_dc_day_sum[1]: 9709.6

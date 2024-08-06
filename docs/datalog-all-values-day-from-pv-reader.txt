@@ -1,0 +1,923 @@
+(rct) ~/SAPDevelop/git/prv/rct-reader> python pv_reader.py --host 192.168.178.78 --read-all
+Reading...
+rb485.f_grid[2]: 50.0
+rb485.phase_marker: 1
+rb485.version_boot: 160322
+rb485.u_l_grid[2]: 239.0
+rb485.version_main: 190203
+rb485.f_wr[0]: 0.0
+rb485.available: 1
+rb485.f_wr[1]: 0.0
+rb485.u_l_grid[1]: 239.0
+rb485.f_wr[2]: 0.0
+rb485.u_l_grid[0]: 239.0
+rb485.f_grid[0]: 50.0
+rb485.f_grid[1]: 50.0
+energy.e_ext_month: 0.0
+energy.e_ext_day_sum: 0.0
+energy.e_ext_total_sum: 0.0
+energy.e_ac_month: 805570.2
+energy.e_grid_load_month: 4419.1
+energy.e_grid_load_total_sum: 0.0
+energy.e_dc_month_sum[1]: 414915.2
+energy.e_dc_day_sum[1]: 9709.6
+energy.e_grid_feed_year: -717219.9
+energy.e_grid_feed_total_sum: 0.0
+energy.e_dc_day[0]: 9524.3
+energy.e_load_day: 2787.8
+energy.e_ac_day_sum: 16984.3
+energy.e_ext_year_sum: 0.0
+energy.e_grid_feed_day: -14355.2
+energy.e_grid_feed_total: -717219.9
+energy.e_dc_year_sum[0]: 86078.8
+energy.e_load_day_sum: 2782.3
+energy.e_load_year_sum: 63296.6
+energy.e_grid_load_total: 17280.0
+energy.e_grid_feed_month: -604871.0
+energy.e_ac_year_sum: 162790.7
+energy.e_dc_total[1]: 513401.0
+energy.e_dc_year_sum[1]: 88697.7
+energy.e_ext_month_sum: 0.0
+energy.e_ac_total_sum: 0.0
+energy.e_dc_month[1]: 424703.3
+energy.e_load_total_sum: 0.0
+energy.e_dc_total_sum[1]: 0.0
+energy.e_dc_month[0]: 412909.7
+energy.e_grid_feed_year_sum: -112351.3
+energy.e_grid_load_day: 5.5
+energy.e_ext_year: 0.0
+energy.e_load_month_sum: 202323.2
+energy.e_grid_feed_month_sum: -590513.4
+energy.e_ext_total: 0.0
+energy.e_dc_year[0]: 498988.5
+energy.e_ac_total: 968365.8
+energy.e_dc_total_sum[0]: 0.0
+energy.e_ext_day: 0.0
+energy.e_ac_day: 17138.1
+energy.e_dc_year[1]: 513402.3
+energy.e_ac_year: 968365.8
+energy.e_load_year: 268407.6
+energy.e_dc_day_sum[0]: 9449.7
+energy.e_grid_load_year_sum: 12860.9
+energy.e_grid_load_month_sum: 4413.6
+energy.e_grid_load_year: 17280.0
+energy.e_dc_month_sum[0]: 403384.1
+WARNING:rct_reader:Timeout, exiting recv
+ERROR:__main__:12:15:54: Timeout, retrying 0/3
+energy.e_load_total: 268407.7
+energy.e_load_month: 205111.1
+energy.e_dc_day[1]: 9793.1
+energy.e_grid_load_day_sum: 5.5
+energy.e_ac_month_sum: 788437.0
+energy.e_dc_total[0]: 498994.6
+energy.e_grid_feed_day_sum: -14211.7
+grid_mon[0].u_over.time: 0.2
+grid_mon[1].u_under.time: 0.3
+grid_mon[0].u_under.threshold: 184.0
+grid_mon[1].f_under.threshold: 47.5
+grid_mon[1].u_over.threshold: 289.0
+grid_mon[0].f_under.time: 0.1
+grid_mon[1].u_under.threshold: 103.5
+grid_mon[1].f_over.threshold: 51.5
+grid_mon[0].f_over.time: 0.1
+grid_mon[0].u_over.threshold: 289.0
+grid_mon[0].f_under.threshold: 47.5
+grid_mon[0].f_over.threshold: 51.5
+grid_mon[0].u_under.time: 3.0
+grid_mon[1].u_over.time: 0.2
+grid_mon[1].f_under.time: 0.1
+grid_mon[1].f_over.time: 0.1
+temperature.sink_temp_power_reduction: 82.0
+temperature.bat_temp_power_reduction: 82.0
+battery.cells_stat[3]: 0d 00 00 00 21 fc fe 65 c1 ca 41 40 11 00 00 00 4a 76 dc 65 2f dd 5c 40 02 00 00 00 3f 08 d7 65 00 00 88 41 0c 00 00 00 78 27 db 65 00 00 10 42
+battery.cells_stat[0].u_max.value: 3.5
+battery.cells_stat[4].u_min.time: 1711209441
+battery.cells_stat[3].t_max.index: 12
+battery.cells_stat[4].t_max.index: 14
+battery.charged_amp_hours: 378.4
+battery.cells_stat[4].u_max.index: 7
+battery.stack_software_version[3]: 5597
+battery.cells_stat[3].t_min.index: 2
+battery.stack_cycles[1]: 16
+battery.cells_stat[4]: 0a 00 00 00 e1 fb fe 65 23 db 41 40 07 00 00 00 5a b3 02 66 68 91 5d 40 02 00 00 00 3f 08 d7 65 00 00 88 41 0e 00 00 00 9d 26 db 65 00 00 10 42
+battery.status2: 0
+battery.cells_stat[3].u_max.value: 3.5
+battery.cells_stat[4].u_min.index: 10
+battery.cells[4]: 15 0b 0d 00 15 0b 0d 00 15 0b 0d 00 15 0b 0d 00 15 0c 0d 00 15 0c 0d 00 15 0b 0d 00 15 0b 0d 00 16 0b 0d 00 15 0b 0d 00 16 0b 0d 00 16 09 0d 00 16 08 0d 00 15 08 0d 00 16 08 0d 00 15 08 0d 00 16 08 0d 00 15 08 0d 00 15 08 0d 00 15 08 0d 00 15 08 0d 00 15 08 0d 00 15 09 0d 00 14 08 0d 00
+battery.module_sn[5]:
+battery.bms_sn: 0180A714022419
+battery.cells_stat[5].u_max.index: 0
+battery.cells_stat[3].u_min.value: 3.0
+battery.bms_power_version: 5597
+battery.maximum_charge_current: 20.1
+battery.cells_stat[3].t_max.time: 1708861304
+battery.current: -0.0
+battery.cells_stat[5]: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+battery.cells_stat[2].u_min.index: 14
+battery.module_sn[3]: 0181C196012734
+battery.cells_stat[1].t_max.index: 14
+battery.cells_stat[2].t_max.time: 1708861176
+battery.stack_cycles[6]: 0
+battery.stack_cycles[5]: 0
+battery.max_cell_voltage: 3.3
+battery.discharged_amp_hours: 340.9
+battery.cells_stat[2].t_max.value: 36.0
+battery.cells_stat[0].t_max.time: 1708861097
+battery.cells_stat[0]: 16 00 00 00 a7 fb fe 65 23 db 41 40 00 00 00 00 4a 76 dc 65 df 4f 5d 40 0c 00 00 00 40 08 d7 65 00 00 88 41 0a 00 00 00 a9 26 db 65 00 00 10 42
+battery.cells_stat[2].u_max.index: 1
+battery.cells_stat[3].u_max.time: 1708947018
+battery.soh: 1.0
+battery.cells_stat[1].u_max.value: 3.5
+battery.cells_stat[3].t_min.value: 17.0
+battery.cells_stat[5].t_max.index: 0
+battery.cells[6]: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+battery.cells_stat[3].u_min.index: 13
+battery.cells_stat[5].u_min.value: 0.0
+battery.cells_stat[4].t_min.time: 1708591167
+battery.cells_stat[0].t_max.index: 10
+battery.prog_sn:
+battery.min_cell_voltage: 3.3
+battery.cells_stat[5].u_max.value: 0.0
+battery.module_sn[4]: 0181C196012758
+battery.cells_resist[5]:
+battery.cells_stat[6].u_min.index: 0
+battery.cells_stat[5].u_min.time: 0
+battery.cells_stat[0].t_max.value: 36.0
+battery.stored_energy: 170955.7
+battery.max_cell_temperature: 23.0
+battery.module_sn[6]:
+battery.cells_stat[1].t_max.time: 1680903985
+battery.stack_cycles[4]: 17
+battery.cells_stat[4].t_min.value: 17.0
+battery.stack_cycles[2]: 16
+battery.cells_stat[6].u_min.time: 0
+battery.cells_stat[0].t_min.value: 17.0
+battery.cells_stat[6].u_min.value: 0.0
+battery.cells[5]: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+battery.stack_software_version[0]: 5597
+battery.cells_stat[1].u_min.index: 16
+battery.cells_resist[0]:
+battery.soc_update_since: 0.0
+battery.voltage: 400.4
+battery.stack_software_version[6]: 0
+battery.cells[2]: 15 09 0d 00 15 0b 0d 00 16 09 0d 00 16 09 0d 00 16 0b 0d 00 16 0b 0d 00 16 0b 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 0b 0d 00 16 09 0d 00 16 08 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 15 08 0d 00 15 08 0d 00 15 08 0d 00
+battery.cells_stat[4].u_min.value: 3.0
+battery.cells_stat[5].u_max.time: 0
+battery.maximum_charge_voltage: 432.0
+battery.cells_stat[1].t_min.index: 2
+battery.bat_status: 0
+battery.maximum_charge_voltage_constant_u: 413.7
+battery.cells_stat[5].t_min.index: 0
+battery.status: 0
+battery.cells_resist[1]:
+battery.inv_cmd: 0
+battery.module_sn[2]: 0181C196012468
+battery.cells_stat[2]: 0e 00 00 00 68 04 ff 65 83 c0 42 40 01 00 00 00 5a b3 02 66 df 4f 5d 40 02 00 00 00 3f 08 d7 65 00 00 90 41 0c 00 00 00 f8 26 db 65 00 00 10 42
+battery.cells_stat[0].u_max.index: 0
+battery.cells_stat[0].u_max.time: 1708947018
+battery.cells_stat[6].u_max.index: 0
+battery.cells_stat[5].t_max.time: 0
+battery.cells_stat[6].u_max.value: 0.0
+battery.cells_stat[4].t_max.value: 36.0
+battery.cells_stat[6].t_min.value: 0.0
+battery.cells_stat[0].u_min.value: 3.0
+battery.cells_stat[5].t_min.value: 0.0
+battery.stack_cycles[3]: 16
+battery.soc_target: 1.0
+battery.cells_stat[6].t_min.time: 0
+battery.cells_stat[3].u_min.time: 1711209505
+battery.cells_stat[4].u_max.time: 1711453018
+battery.cells[1]: 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 17 09 0d 00 16 09 0d 00 17 08 0d 00 16 08 0d 00 17 0b 0d 00 16 0b 0d 00 17 0b 0d 00 16 0b 0d 00 17 0b 0d 00 16 0b 0d 00 16 0b 0d 00 16 0b 0d 00 16 0b 0d 00 16 0b 0d 00 16 0b 0d 00 15 0b 0d 00
+battery.cells_stat[6].t_max.time: 0
+battery.temperature: 21.7
+battery.cells_stat[1].u_max.time: 1711112456
+battery.cells_stat[0].t_min.time: 1708591168
+battery.cells_stat[6].t_max.value: 0.0
+battery.soc: 1.0
+battery.module_sn[1]: 0181C196012467
+battery.cells_resist[3]:
+battery.bms_software_version: 5597
+battery.cells_stat[2].u_max.time: 1711453018
+battery.min_cell_temperature: 20.0
+battery.cells_stat[2].t_min.value: 18.0
+battery.stack_software_version[4]: 5597
+battery.stack_software_version[1]: 5597
+battery.soc_target_low: 1.0
+battery.cells_stat[4].t_min.index: 2
+battery.stack_cycles[0]: 17
+battery.cells_stat[2].t_max.index: 12
+battery.cells_stat[2].t_min.index: 2
+battery.used_energy: 155692.3
+battery.cells_stat[4].t_max.time: 1708861085
+battery.efficiency: 0.9
+battery.minimum_discharge_voltage: 336.0
+battery.cells_stat[1].u_min.value: 3.0
+battery.ah_capacity: 25.0
+battery.cells_stat[2].u_min.time: 1711211624
+battery.soc_target_high: 1.0
+battery.cells_stat[5].u_min.index: 0
+battery.cells_stat[1].t_min.time: 1708591167
+battery.cells_stat[6].t_max.index: 0
+battery.cells_stat[2].t_min.time: 1708591167
+battery.cycles: 14
+battery.cells_stat[1].u_max.index: 16
+battery.cells_stat[6].u_max.time: 0
+battery.cells[3]: 15 09 0d 00 15 09 0d 00 15 09 0d 00 15 09 0d 00 15 09 0d 00 15 09 0d 00 16 09 0d 00 16 09 0d 00 16 0b 0d 00 16 09 0d 00 16 09 0d 00 16 08 0d 00 16 08 0d 00 16 06 0d 00 16 08 0d 00 16 08 0d 00 16 08 0d 00 16 08 0d 00 16 06 0d 00 16 08 0d 00 15 08 0d 00 15 08 0d 00 15 08 0d 00 15 06 0d 00
+battery.cells_stat[0].u_min.time: 1711209383
+battery.stack_software_version[2]: 5597
+battery.cells_stat[1].t_min.value: 18.0
+battery.cells_stat[1].u_min.time: 1711209290
+battery.cells_stat[0].t_min.index: 12
+battery.cells_stat[5].t_max.value: 0.0
+battery.cells_resist[4]:
+battery.maximum_discharge_current: 21.0
+battery.cells_stat[6].t_min.index: 0
+battery.cells_stat[2].u_max.value: 3.5
+WARNING:rct_reader:Timeout, exiting recv
+ERROR:__main__:12:16:07: Timeout, retrying 0/3
+WARNING:rct_reader:Timeout, exiting recv
+Timeout.
+ERROR:__main__:12:16:07: Timeout, retrying 1/3
+battery.cells_resist[6]:
+battery.stack_software_version[5]: 0
+battery.cells_stat[2].u_min.value: 3.0
+battery.cells_stat[5].t_min.time: 0
+battery.cells_stat[3].t_max.value: 36.0
+battery.cells_stat[1].t_max.value: 36.0
+battery.cells_resist[2]:
+battery.cells_stat[4].u_max.value: 3.5
+battery.cells[0]: 15 09 0d 00 15 08 0d 00 15 09 0d 00 15 09 0d 00 16 08 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 09 0d 00 16 08 0d 00 16 06 0d 00 16 08 0d 00 16 08 0d 00 16 08 0d 00 16 08 0d 00 16 08 0d 00 15 08 0d 00 16 08 0d 00 15 08 0d 00 15 08 0d 00 14 08 0d 00
+battery.cells_stat[6]: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+battery.cells_stat[3].t_min.time: 1708591167
+battery.cells_stat[1]: 10 00 00 00 4a fb fe 65 d3 4d 42 40 10 00 00 00 08 81 fd 65 f4 fd 5c 40 02 00 00 00 3f 08 d7 65 00 00 90 41 0e 00 00 00 31 8f 30 64 00 00 10 42
+battery.module_sn[0]: 0181C196012460
+battery.cells_stat[3].u_max.index: 17
+battery.cells_stat[0].u_min.index: 22
+battery.bat_impedance.impedance_fine: 0.0
+battery.minimum_discharge_voltage_constant_u: 364.0
+cs_neg[2]: -1.0
+cs_neg[1]: -1.0
+cs_neg[0]: -1.0
+hw_test.state: 0
+hw_test.bt_power[6]: 0.0
+hw_test.bt_time[2]: 0.0
+hw_test.bt_time[9]: 0.0
+hw_test.bt_time[0]: 86400.0
+hw_test.bt_power[7]: 0.0
+hw_test.bt_power[0]: 9999.0
+hw_test.bt_cycle: 0
+hw_test.bt_time[3]: 0.0
+hw_test.bt_power[2]: 2000.0
+hw_test.bt_power[4]: 0.0
+hw_test.hw_switch_time: 60.0
+hw_test.bt_time[5]: 0.0
+hw_test.bt_power[9]: 0.0
+hw_test.bt_time[8]: 0.0
+hw_test.booster_test_index: 1
+hw_test.bt_time[6]: 0.0
+hw_test.bt_power[5]: 0.0
+hw_test.bt_power[1]: 4000.0
+hw_test.bt_time[4]: 0.0
+hw_test.bt_time[1]: 0.0
+hw_test.bt_power[3]: 0.0
+hw_test.timer2: 364.0
+hw_test.bt_time[7]: 0.0
+hw_test.bt_power[8]: 0.0
+g_sync.p_ac_load[0]: 23.4
+g_sync.u_zk_n_avg: 389.2
+g_sync.p_ac[1]: 2881.3
+g_sync.p_ac_load_sum_lp: 69.8
+g_sync.u_zk_sum_mov_avg: 777.5
+g_sync.u_l_rms[2]: 238.5
+g_sync.p_ac_load[1]: 89.0
+g_sync.p_ac_sc[0]: -2855.1
+g_sync.s_ac_lp[0]: 2882.8
+g_sync.p_acc_lp: 2.5
+g_sync.s_ac_lp[1]: 2882.8
+g_sync.p_ac[0]: 2884.0
+g_sync.u_ptp_rms[1]: 413.3
+g_sync.i_dr_lp[2]: -0.0
+g_sync.p_ac_sum: 8652.0
+g_sync.u_l_rms[1]: 239.3
+g_sync.s_ac[2]: 2882.8
+g_sync.p_ac_sc_sum: -8574.7
+g_sync.s_ac[1]: 2883.7
+g_sync.u_ptp_rms[0]: 414.3
+g_sync.i_dr_eff[1]: 12.1
+g_sync.p_ac_lp[1]: 2884.9
+g_sync.p_ac_lp[0]: 2883.4
+g_sync.q_ac_sum_lp: -134.7
+g_sync.q_ac[1]: -40.2
+g_sync.s_ac_lp[2]: 2883.6
+g_sync.i_dr_lp[0]: -0.0
+g_sync.i_dr_eff[0]: 12.1
+g_sync.u_zk_sum_avg: 778.7
+g_sync.p_ac_grid_sum_lp: -8587.4
+g_sync.i_dr_eff[2]: 12.1
+g_sync.u_sg_avg[1]: 441.5
+g_sync.p_ac_sc[2]: -2950.5
+g_sync.u_sg_avg[0]: 441.1
+g_sync.p_ac_lp[2]: 2882.6
+g_sync.q_ac[2]: -50.1
+g_sync.p_ac[2]: 2881.3
+g_sync.u_zk_p_avg: 389.6
+g_sync.s_ac[0]: 2881.6
+g_sync.u_l_rms[0]: 238.9
+g_sync.p_ac_sum_lp: 8650.6
+g_sync.s_ac_sum_lp: 8652.0
+g_sync.i_dr_lp[1]: 0.0
+g_sync.q_ac[0]: -44.9
+g_sync.p_ac_load[2]: -58.3
+g_sync.u_ptp_rms[2]: 412.9
+g_sync.p_ac_sc[1]: -2792.2
+logger.day_egrid_load_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_ubat_log_ts: (datetime.datetime(2024, 3, 27, 2, 55), {})
+logger.minutes_ul3_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.day_eb_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_ub_log_ts: (datetime.datetime(2024, 3, 27, 4, 15), {})
+logger.minutes_temp2_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.year_egrid_feed_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_eb_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.minutes_eac1_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.year_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.month_ea_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.year_eb_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_eext_log_ts: (datetime.datetime(2024, 3, 27, 5, 5), {})
+logger.month_eload_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_ul2_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.year_ea_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.year_eext_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_ea_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.minutes_soc_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.minutes_ul1_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.minutes_eac2_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.month_egrid_load_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.day_eext_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_eac_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.month_eb_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.error_log_time_stamp: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.year_eac_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_ua_log_ts: (datetime.datetime(2024, 3, 27, 2, 5), {})
+logger.minutes_soc_targ_log_ts: (datetime.datetime(2024, 3, 27, 1, 50), {})
+logger.month_egrid_feed_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_egrid_load_log_ts: (datetime.datetime(2024, 3, 27, 3, 5), {})
+logger.log_rate: 300
+logger.minutes_egrid_feed_log_ts: (datetime.datetime(2024, 3, 27, 3, 0), {})
+logger.minutes_eload_log_ts: (datetime.datetime(2024, 3, 27, 5, 5), {})
+logger.day_egrid_feed_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.year_egrid_load_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.day_eload_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_ebat_log_ts: (datetime.datetime(2024, 3, 27, 2, 55), {})
+logger.minutes_temp_bat_log_ts: (datetime.datetime(2024, 3, 27, 3, 15), {})
+logger.day_eac_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_eac3_log_ts: (datetime.datetime(2024, 3, 27, 1, 40), {})
+logger.month_eext_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.year_eload_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.month_eac_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.minutes_temp_log_ts: (datetime.datetime(2024, 3, 27, 4, 20), {})
+logger.day_ea_log_ts: (datetime.datetime(1970, 1, 1, 1, 0), {})
+logger.buffer: 66 03 9a ec 66 03 9a ec 00 00 00 00 66 03 99 c0 00 00 00 00 66 03 98 94 00 00 00 00 66 03 97 68 00 00 00 00 66 03 96 3c 00 00 00 00 66 03 95 10 00 00 00 00 66 03 93 e4 00 00 00 00 66 03 92 b8 00 00 00 00 66 03 91 8c 00 00 00 00 66 03 90 60 00 00 00 00 66 03 8f 34 00 00 00 00 66 03 8e 08 00 00 00 00 66 03 8c dc 00 00 00 00 66 03 8b b0 00 00 00 00 66 03 8a 84 00 00 00 00 66 03 89 58 00 00 00 00 66 03 88 2c 00 00 00 00 66 03 87 00 00 00 00 00 66 03 85 d4 00 00 00 00 66 03 84 a8 00 00 00 00 66 03 83 7c 00 00 00 00 66 03 82 50 00 00 00 00 66 03 81 24 00 00 00 00 66 03 7f f8 00 00 00 00 66 03 7e cc 00 00 00 00 66 03 7d a0 00 00 00 00 66 03 7c 74 00 00 00 00 66 03 7b 48 00 00 00 00 66 03 7a 1c 00 00 00 00 66 03 78 f0 00 00 00 00 66 03 77 c4 00 00 00 00 66 03 76 98 00 00 00 00 66 03 75 6c 00 00 00 00 66 03 74 40 00 00 00 00 66 03 73 14 00 00 00 00 66 03 71 e8 00 00 00 00 66 03 70 bc 00 00 00 00 66 03 6f 90 00 00 00 00 66 03 6e 64 00 00 00 00 66 03 6d 38 00 00 00 00 66 03 6c 0c 00 00 00 00 66 03 6a e0 00 00 00 00 66 03 69 b4 00 00 00 00 66 03 68 88 00 00 00 00 66 03 67 5c 00 00 00 00 66 03 66 30 00 00 00 00 66 03 65 04 00 00 00 00 66 03 63 d8 00 00 00 00 66 03 62 ac 00 00 00 00 66 03 61 80 00 00 00 00 66 03 60 54 00 00 00 00 66 03 5f 28 00 00 00 00 66 03 5d fc 00 00 00 00 66 03 5c d0 00 00 00 00 66 03 5b a4 00 00 00 00 66 03 5a 78 00 00 00 00 66 03 59 4c 00 00 00 00 66 03 58 20 00 00 00 00 66 03 56 f4 00 00 00 00 66 03 55 c8 00 00 00 00
+wifi.ip: 192.168.178.78
+wifi.sockb_protocol: 0
+wifi.password:
+wifi.dns_address: 0.0.0.0
+wifi.connect_to_server: 1
+wifi.connect_to_wifi: 0
+wifi.authentication_method: WPA2PSK
+wifi.mask: 255.255.255.0
+wifi.mode: DHCP
+wifi.sockb_port: 8899
+wifi.encryption_algorithm: AES
+wifi.gateway: 192.168.178.1
+wifi.sockb_ip: 0.0.0.0
+wifi.result: 0
+wifi.state: 7
+wifi.use_ethernet: 1
+wifi.use_wifi: 0
+wifi.connected_ap_ssid:
+wifi.service_ip: 0.0.0.0
+wifi.server_ip: rctgw.buildsys.cz
+wifi.service_port: 0
+WARNING:rct_reader:Timeout, exiting recv
+ERROR:__main__:12:16:24: Timeout, retrying 0/3
+wifi.connect_service_timestamp: 1711542093
+wifi.server_port: 8899
+wifi.connect_to_service: 0
+wifi.connect_service_max_duration: 2592000
+adc.u_ref_1_5v[0]: 8198
+adc.u_ref_1_5v[1]: 8211
+adc.u_ref_1_5v[3]: 8210
+adc.u_ref_1_5v[2]: 8195
+adc.u_acc: 401.5
+net.id: 2813300181
+net.load_reduction: 0.5
+net.command: 0
+net.net_tunnel_id: 2813300181
+net.index: 0
+net.prev_k: 1.0
+net.package: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+net.n_descendants: 0
+net.use_network_filter: 0
+net.update_slaves: 0
+net.slave_p_total: 0.0
+net.master_timeout: 2097152.0
+net.n_slaves: 0
+net.slave_data: d5 8d af a7 50 53 20 31 30 2e 30 20 4b 32 45 38 00 00 00 00 00 00 00 00 00 00 00 00 73 4d 09 46 eb 72 03 40 71 02 78 3f 00 00 07 0d 00 00 00 00 32 2e 33 2e 35 36 37 33 00 00 00 00 00 00 00 00 30 30 36 35 42 34 30 32 30 31 37 39 33 39 00 00 00 00 00 00 dd 15 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+net.soc_av: 0.0
+net.slave_timeout: 2097152.0
+net.n_devices: 1
+acc_conv.i_charge_max: 25.0
+acc_conv.i_acc_lp_slow: 0.0
+acc_conv.i_discharge_max: 25.0
+acc_conv.state_slow: 4
+acc_conv.i_max: 29.0
+acc_conv.i_acc_lp_fast: 0.0
+dc_conv.dc_conv_struct[1].p_dc_lp: 4546.6
+dc_conv.dc_conv_struct[1].u_sg_lp: 426.6
+dc_conv.dc_conv_struct[1].mpp.fixed_voltage: 0.0
+dc_conv.start_voltage: 150.0
+dc_conv.dc_conv_struct[0].mpp.enable_scan: 0
+dc_conv.dc_conv_struct[0].enabled: 1
+dc_conv.dc_conv_struct[1].mpp.enable_scan: 0
+dc_conv.dc_conv_struct[0].mpp.fixed_voltage: 0.0
+dc_conv.dc_conv_struct[1].p_dc: 4563.8
+dc_conv.dc_conv_struct[0].u_sg_lp: 441.0
+dc_conv.dc_conv_struct[0].p_dc: 4395.1
+dc_conv.dc_conv_struct[1].rescan_correction: 0.0
+dc_conv.dc_conv_struct[0].p_dc_lp: 4389.0
+dc_conv.dc_conv_struct[0].rescan_correction: 0.0
+dc_conv.dc_conv_struct[1].enabled: 1
+dc_conv.dc_conv_struct[0].u_target: 441.1
+dc_conv.dc_conv_struct[1].u_target: 445.1
+dc_conv.last_rescan: 1708591049
+nsm.u_q_u[3]: 246.0
+nsm.cos_phi_p[3][1]: -0.9
+nsm.u_q_u[0]: 214.0
+nsm.rpm_lock_out_power: 0.2
+nsm.cos_phi_p[1][0]: 0.2
+nsm.cos_phi_p[0][1]: 1.0
+nsm.p_u[0][1]: 0.0
+nsm.p_u[3][1]: 0.0
+nsm.startup_grad: 0.0
+nsm.cos_phi_p[1][1]: 1.0
+nsm.pf_delay: 600.0
+nsm.p_u[3][0]: 0.0
+nsm.cos_phi_p[2][1]: 1.0
+nsm.startup_grad_after_fault: 0.0
+nsm.p_u[0][0]: 0.0
+nsm.cos_phi_ts: 10.0
+nsm.apm: 1
+nsm.p_u[1][0]: 0.0
+nsm.pu_mode: 0
+nsm.pu_use: 0
+nsm.cos_phi_p[0][0]: 0.0
+nsm.q_u_max_u_high: -2747.0
+nsm.f_exit: 50.2
+nsm.cos_phi_p[2][0]: 0.5
+nsm.q_u_hysteresis: 0
+nsm.p_u[2][0]: 0.0
+nsm.cos_phi_const: 1.0
+nsm.min_cos_phi: 0.4
+nsm.u_q_u[1]: 223.0
+nsm.rpm: 0
+nsm.u_lock_out: 0.0
+nsm.Q_const: 0.0
+nsm.q_u_max_u_low: 2747.0
+nsm.u_lock_in: 0.0
+nsm.pf_desc_grad: 0.4
+nsm.u_q_u[2]: 237.0
+nsm.pf_rise_grad: 0.0
+nsm.pu_ts: 5.0
+nsm.p_u[1][1]: 0.0
+nsm.pf_hysteresis: 0
+nsm.p_limit: 9880.0
+nsm.cos_phi_p[3][0]: 1.0
+nsm.p_u[2][1]: 0.0
+nsm.f_entry: 50.2
+nsm.rpm_lock_in_power: 0.2
+nsm.q_u_max_u_high_rel: -0.4
+nsm.f_low_exit: 49.8
+nsm.q_u_sel: 0
+nsm.q_u_max_u_low_rel: 0.4
+nsm.pf_use_p_max: 1
+nsm.f_low_rise_grad: 0.4
+nsm.f_low_entry: 49.8
+nsm.f_low_rise_grad_storage: 1.0
+io_board.io1_polarity: 1
+io_board.rse_table[0]: 1.0
+io_board.check_rs485_result: 0
+io_board.check_rse_result: 0
+io_board.rse_table[10]: 1.0
+io_board.home_relay_sw_off_delay: 120.0
+io_board.rse_table[8]: 0.0
+io_board.rse_table[6]: 1.0
+io_board.io2_usage: 0
+io_board.rse_table[12]: 1.0
+io_board.rse_table[2]: 0.6
+io_board.check_state: 0
+io_board.io1_s0_imp_per_kwh: 2000
+io_board.alarm_home_relay_mode: 0
+io_board.rse_table[14]: 1.0
+io_board.rse_table[9]: 1.0
+io_board.io2_s0_imp_per_kwh: 2000
+io_board.rse_table[1]: 1.0
+io_board.home_relay_sw_on_delay: 120.0
+io_board.s0_direction: 0
+io_board.io2_polarity: 1
+io_board.rse_data_delay: 1.0
+io_board.load_set: 0.0
+io_board.rse_table[15]: 1.0
+io_board.rse_data: 0
+io_board.io1_usage: 0
+io_board.rse_table[4]: 0.3
+io_board.rse_table[7]: 1.0
+io_board.check_start: 0
+io_board.io1_s0_min_duration: 0.0
+io_board.rse_table[5]: 1.0
+io_board.rse_table[11]: 1.0
+io_board.home_relay_threshold: 1000.0
+io_board.rse_table[3]: 1.0
+io_board.s0_sum: 0.0
+io_board.io2_s0_min_duration: 0.0
+io_board.rse_table[13]: 1.0
+io_board.home_relay_off_threshold: 0.0
+io_board.s0_external_power: 0.0
+io_board.alarm_home_value: 0
+io_board.check_s0_result: 0
+io_board.p_rse_rise_grad: 0.0
+io_board.p_rse_desc_grad: 0.0
+flash_rtc.time_stamp_set: 0
+flash_rtc.rtc_mcc_quartz_max_diff: 120.0
+flash_rtc.flag_time_auto_switch: 1
+flash_rtc.rtc_mcc_quartz_ppm_difference: -3.4
+flash_rtc.time_stamp_factory: 1706123195
+flash_rtc.time_stamp: 1711541804
+flash_rtc.time_stamp_update: 1643959132
+power_mng.battery_power: 0.0
+power_mng.soc_charge_power: 100.0
+power_mng.bat_empty_full: 2
+power_mng.use_grid_power_enable: 1
+power_mng.schedule[6]:
+power_mng.schedule[8]:
+power_mng.schedule[4]:
+power_mng.maximum_charge_voltage: 413.7
+power_mng.is_heiphoss: 1
+power_mng.schedule[3]:
+power_mng.battery_type: 3
+power_mng.schedule[9]:
+power_mng.soc_min_island: 0.1
+power_mng.bat_calib_reqularity: 30
+power_mng.stop_discharge_voltage_buffer: 0.5
+power_mng.soc_max: 1.0
+power_mng.is_grid: 0
+power_mng.u_acc_lp: 401.5
+power_mng.power_lim_src_index: 0
+power_mng.schedule[5]:
+power_mng.feed_asymmetrical: 0
+power_mng.u_acc_mix_lp: 400.5
+power_mng.model.bat_power_change: -0.0
+power_mng.minimum_discharge_voltage: 364.0
+power_mng.bat_next_calib_date: 1713790800
+power_mng.battery_power_extern: 0.0
+power_mng.soc_charge: 0.1
+power_mng.force_inv_class: 0
+power_mng.soc_min: 0.1
+power_mng.stop_charge_current: 2.5
+WARNING:rct_reader:Timeout, exiting recv
+ERROR:__main__:12:16:38: Timeout, retrying 0/3
+power_mng.soc_target_set: 0.5
+power_mng.state: 2
+power_mng.amp_hours_measured: 25.0
+power_mng.schedule[1]:
+power_mng.stop_discharge_current: 2.5
+power_mng.soc_strategy: 4
+power_mng.calib_charge_power: 4000.0
+power_mng.schedule[7]:
+power_mng.amp_hours: 25.9
+power_mng.is_island_only: 0
+power_mng.schedule[0]:
+power_mng.schedule[2]:
+power_mng.n_batteries: 2
+power_mng.bat_calib_days_in_advance: 3
+buf_v_control.power_reduction_max_solar: 9880.0
+buf_v_control.power_reduction_max_solar_grid: 9880.0
+buf_v_control.power_reduction: 1.0
+db.power_board.Current_Mean: 0.9
+db.power_board.adc_p9V_meas: 9.2
+db.power_board.Calibr_Value_Mean: -40.7
+db.power_board.afi_t300: 0.0
+db.power_board.afi_i60: 0.1
+db.power_board.relays_state: 37194
+db.power_board.afi_t60: 0.2
+db.temp2: 32.2
+db.power_board.afi_t150: 0.0
+db.power_board.version_boot: 150224
+WARNING:rct_reader:Timeout, exiting recv
+ERROR:__main__:12:16:43: Timeout, retrying 0/3
+db.power_board.afi_i30: 0.0
+db.power_board.afi_i150: 0.2
+db.power_board.afi_i300: 0.3
+db.power_board.version_main: 211216
+db.power_board.adc_p5V_W_meas: 5.0
+db.power_board.adc_m9V_meas: -9.5
+db.power_board.status: 1
+db.power_board.Current_AC_RMS: 0.2
+db.power_board.afi_t30: 0.3
+db.core_temp: 34.1
+db.power_board.Current_Mean_Mean_AC: 0.2
+db.power_board.adc_p3V3_meas: 3.2
+db.temp1: 38.2
+switch_on_cond.u_min: 197.0
+switch_on_cond.f_min: 47.5
+switch_on_cond.test_time_fault: 120.0
+switch_on_cond.f_max: 50.1
+switch_on_cond.u_max: 252.0
+switch_on_cond.test_time: 60.0
+switch_on_cond.max_rnd_test_time_fault: 480.0
+p_rec_req[1]: 0.0
+p_rec_req[0]: 78.3
+p_rec_req[2]: 9999.0
+p_rec_lim[1]: 0.0
+p_rec_available[2]: 0.0
+p_rec_lim[0]: 10100.0
+p_rec_available[1]: -0.2
+p_rec_lim[2]: 9999.0
+p_rec_available[0]: 0.0
+modbus.mode: 0
+modbus.address: 0
+bat_mng_struct.profile_pdc_max:
+bat_mng_struct.profile_load: 4e 80 5a 43 15 49 45 43 54 d8 1d 43 0a a5 0b 43 b3 ab 1a 43 9c e0 24 43 ec c9 2d 43 db fc 20 43 d7 4a 23 43 61 e8 1c 43 78 3f 0c 43 8d 6e 10 43 46 86 a2 43 79 fe a6 43 40 5a ce 43 92 24 5c 43 03 6e 06 44 46 d1 db 43 26 21 c6 43 bd 58 70 43 00 12 c6 43 f3 7d 3e 43 fe b9 1f 44 13 62 80 44 e0 5c 2f 44 79 6b 56 43 fe 76 d6 43 0a ca ce 43 06 bb d7 43 d7 ca 84 43 1e 44 b5 43 01 5a ad 43 f6 50 db 43 dd a0 0e 44 76 ab e4 43 db 04 98 43 c8 0c 5c 43 41 9f d9 43 e6 1e ba 43 32 8f 09 44 09 3a 34 44 a8 72 9e 43 d7 0e 97 43 14 9c 66 43 26 55 67 43 40 35 6e 43 82 da be 43 16 b0 53 43
+bat_mng_struct.k_trust: 1000.0
+bat_mng_struct.profile_pext:
+bat_mng_struct.profile_pdc:
+bat_mng_struct.k: 1.1
+bat_mng_struct.k_reserve: 1.2
+bat_mng_struct.count: <
+bat_mng_struct.bat_calib_soc_thresh: 0.8
+bat_mng_struct.bat_calib_soc_threshold: 0.8
+iso_struct.Rn: 1245340.6
+iso_struct.r_min: 400000.0
+iso_struct.Rp: 2094430.8
+iso_struct.Riso: 780975.4
+grid_lt.threshold: 253.0
+grid_lt.granularity: 2.0
+grid_lt.timeframe: 600.0
+can_bus.bms_update_response[0]: 0
+can_bus.requested_id: 0
+can_bus.bms_update_response[1]: 0
+can_bus.bms_update_state: 0
+can_bus.set_cell_resist: 0
+can_bus.set_cell_v_t: 1510803478
+display_struct.display_dir: 0
+display_struct.blink: 0
+display_struct.variate_contrast: 0
+display_struct.contrast: 8
+flash_state: 0
+flash_mem:
+flash_param.write_cycles: 13
+flash_param.erase_cycles: 0
+last_successfull_flash_op: 5
+flash_result: 0
+fault[1].flt: 0
+fault[0].flt: 0
+fault[2].flt: 0
+fault[3].flt: 0
+prim_sm.island_flag: 2
+prim_sm.is_thin_layer: 0
+prim_sm.state: 13
+prim_sm.state_source: 18
+prim_sm.phase_3_mode: 1
+prim_sm.minigrid_flag: 0
+prim_sm.island_next_repeat_timeout: 90.0
+prim_sm.island_reset_retrials_counter_time: 0.0
+prim_sm.island_max_trials: 3
+prim_sm.island_reset_retrials_operation_time: 15.0
+prim_sm.island_retrials: 0
+prim_sm.Uzk_pump_grad[0]: 318.4
+cs_map[1]: 0
+cs_map[2]: 2
+cs_map[0]: 1
+line_mon.u_max: 458.1
+line_mon.u_min: 150.0
+line_mon.time_lim: 0.2
+detect_phase_shift_enable: 1
+max_phase_shift: 65.0
+partition[3].last_id: 9837
+grid_pll[0].f: 50.0
+cs_struct.is_tuned: 1
+performance_free[0]: 0
+grid_offset: 0.0
+power_spring_up: 1.0
+power_spring_bat: 1.0
+power_spring_offset: 0.0
+phase_3_mode: 1
+parameter_file: DE_ARN4105_1811_200326
+i_dc_max: 0.9
+inverter_sn: 0065B402017939
+inv_struct.force_dh: 1
+i_dc_slow_time: 1.0
+current_sensor_max: 156.0
+com_service: 0
+svnversion_last_known: 2.3.5673
+phase_marker: 1
+relays.bits_real: 63
+power_spring_down: 1.0
+osci_struct.cmd_response_time: 0.0
+svnversion_factory: 2.3.5673
+i_ac_max_set: 21.5
+i_ac_extern_connected: 1
+osci_struct.error: 326
+svnversion: 2.3.5673
+i_dc_slow_max: 0.0
+WARNING:rct_reader:Timeout, exiting recv
+ERROR:__main__:12:16:53: Timeout, retrying 0/3
+WARNING:rct_reader:Timeout, exiting recv
+Timeout.
+ERROR:__main__:12:16:53: Timeout, retrying 1/3
+WARNING:rct_reader:Timeout, exiting recv
+Timeout.
+ERROR:__main__:12:16:53: Timeout, retrying 2/3
+WARNING:rct_reader:Timeout, exiting recv
+Timeout.
+WARNING:rct_reader:Timeout, exiting recv
+ERROR:__main__:12:17:13: Timeout, retrying 0/3
+android_description: PS 10.0 K2E8
+p_buf_available: 8534.4
+inv_struct.cosinus_phi: 1.0
+update_is_allowed_id: 0
+common_control_bits: 1663
+i_bottom_max: 21.0
+WARNING:rct_reader:Timeout, exiting recv
+ERROR:__main__:12:17:17: Timeout, retrying 0/3
+pas.period: 30
+frt.u_min[2]: 195.5
+frt.u_min_end: 195.5
+frt.t_min[1]: 0.2
+frt.u_max[0]: 289.0
+frt.u_min[0]: 33.0
+frt.u_min_begin: 184.0
+frt.u_max_begin: 264.5
+frt.u_max_end: 253.0
+frt.t_max[0]: 0.0
+frt.u_max[2]: 264.5
+frt.t_max[2]: 5.0
+frt.t_min[0]: 0.0
+frt.u_min[1]: 33.0
+frt.t_max[1]: 0.1
+frt.u_max[1]: 277.5
+frt.t_min[2]: 3.0
+frt.enabled: 1
+partition[1].last_id: 4918
+partition[2].last_id: 244
+partition[5].last_id: 2
+partition[6].last_id: 1
+partition[4].last_id: 35
+partition[0].last_id: 4919
+dc_conv.dc_conv_struct[1].mpp.mpp_step: 7.1
+dc_conv.dc_conv_struct[0].mpp.mpp_step: -10.2
+display_struct.brightness: 204
+battery_placeholder[0].cells_stat[2].u_min.value: 0.0
+battery_placeholder[0].module_sn[5]:
+battery_placeholder[0].cells_stat[1].u_min.value: 0.0
+battery_placeholder[0].cells_stat[3].t_max.index: 0
+battery_placeholder[0].max_cell_temperature: 0.0
+battery_placeholder[0].cells_stat[3].u_max.index: 0
+battery_placeholder[0].cells_stat[0].t_max.value: 0.0
+battery_placeholder[0].cells_stat[6].t_min.time: 0
+battery_placeholder[0].cells_resist[0]:
+battery_placeholder[0].cells_stat[6].u_min.index: 0
+battery_placeholder[0].cells_stat[6].u_max.index: 0
+battery_placeholder[0].stack_software_version[3]: 0
+battery_placeholder[0].maximum_discharge_current: 0.0
+battery_placeholder[0].cells_stat[4].u_max.index: 0
+battery_placeholder[0].soh: 0.0
+battery_placeholder[0].cells_stat[0].u_max.value: 0.0
+battery_placeholder[0].cells_stat[4].t_min.index: 0
+battery_placeholder[0].cells[4]:
+battery_placeholder[0].cells_stat[6].u_max.value: 0.0
+battery_placeholder[0].cells_stat[1].t_min.index: 0
+battery_placeholder[0].cells_resist[4]:
+battery_placeholder[0].cells_stat[2].t_max.value: 0.0
+battery_placeholder[0].module_sn[4]:
+battery_placeholder[0].cells_stat[3].u_max.time: 0
+battery_placeholder[0].stack_software_version[1]: 0
+battery_placeholder[0].cells_stat[0]:
+battery_placeholder[0].min_cell_temperature: 0.0
+battery_placeholder[0].cells_resist[6]:
+battery_placeholder[0].cells_stat[5].u_min.value: 0.0
+battery_placeholder[0].cells_stat[0].t_max.index: 0
+battery_placeholder[0].cells_stat[2].u_min.time: 0
+battery_placeholder[0].cells[2]:
+battery_placeholder[0].cells_stat[5].u_min.index: 0
+battery_placeholder[0].cells_stat[5].u_max.value: 0.0
+battery_placeholder[0].cells_stat[6].u_min.time: 0
+battery_placeholder[0].cells_stat[5].u_min.time: 0
+battery_placeholder[0].cells_stat[2].u_max.value: 0.0
+battery_placeholder[0].cells_stat[2].t_min.value: 0.0
+battery_placeholder[0].cells_stat[1].u_min.index: 0
+battery_placeholder[0].cells_stat[2]:
+battery_placeholder[0].cells_stat[3].t_max.value: 0.0
+battery_placeholder[0].cells_stat[1]:
+battery_placeholder[0].cells[0]:
+battery_placeholder[0].cells_stat[4].u_max.value: 0.0
+battery_placeholder[0].module_sn[3]:
+battery_placeholder[0].cells_stat[5].t_min.value: 0.0
+battery_placeholder[0].stack_software_version[5]: 0
+battery_placeholder[0].stack_cycles[1]: 0
+battery_placeholder[0].cells_stat[2].u_max.index: 0
+battery_placeholder[0].cells_stat[3].t_min.time: 0
+battery_placeholder[0].maximum_charge_current: 0.0
+battery_placeholder[0].status2: 0
+battery_placeholder[0].cells_stat[0].u_max.index: 0
+battery_placeholder[0].cells[6]:
+battery_placeholder[0].cells_stat[1].t_max.value: 0.0
+battery_placeholder[0].cells_stat[3].t_min.index: 0
+battery_placeholder[0].cells_stat[6].t_max.index: 0
+battery_placeholder[0].module_sn[0]:
+battery_placeholder[0].bms_power_version: 0
+battery_placeholder[0].cells_stat[0].u_min.time: 0
+battery_placeholder[0].cells_stat[0].t_min.value: 0.0
+battery_placeholder[0].cells_stat[5].t_max.index: 0
+battery_placeholder[0].cells_stat[5].t_max.time: 0
+battery_placeholder[0].minimum_discharge_voltage: 0.0
+battery_placeholder[0].stack_software_version[0]: 0
+battery_placeholder[0].stack_cycles[6]: 0
+battery_placeholder[0].cells_stat[3].u_min.time: 0
+battery_placeholder[0].cells_stat[4].t_min.time: 0
+battery_placeholder[0].current: 0.0
+battery_placeholder[0].cells_stat[6].t_min.index: 0
+battery_placeholder[0].cells_stat[6]:
+battery_placeholder[0].stack_cycles[2]: 0
+battery_placeholder[0].cells[3]:
+battery_placeholder[0].cells_resist[2]:
+battery_placeholder[0].cells_stat[1].u_max.value: 0.0
+battery_placeholder[0].cells_stat[4].t_min.value: 0.0
+battery_placeholder[0].module_sn[6]:
+battery_placeholder[0].stack_software_version[2]: 0
+battery_placeholder[0].stack_cycles[4]: 0
+battery_placeholder[0].soc: 0.0
+battery_placeholder[0].cells_stat[2].t_max.time: 0
+battery_placeholder[0].cells[5]:
+battery_placeholder[0].stack_cycles[3]: 0
+battery_placeholder[0].cells_stat[1].t_max.index: 0
+battery_placeholder[0].cells_stat[0].t_min.index: 0
+battery_placeholder[0].cells_stat[1].t_max.time: 0
+battery_placeholder[0].cells_stat[2].t_min.time: 0
+battery_placeholder[0].cells_stat[4].u_max.time: 0
+battery_placeholder[0].cells[1]:
+battery_placeholder[0].max_cell_voltage: 0.0
+battery_placeholder[0].stack_cycles[5]: 0
+battery_placeholder[0].cells_stat[6].t_min.value: 0.0
+battery_placeholder[0].cells_stat[0].u_max.time: 0
+battery_placeholder[0].stack_software_version[6]: 0
+battery_placeholder[0].cells_stat[1].u_min.time: 0
+battery_placeholder[0].cells_stat[6].u_min.value: 0.0
+battery_placeholder[0].cells_resist[5]:
+battery_placeholder[0].cells_stat[4].t_max.value: 0.0
+battery_placeholder[0].module_sn[1]:
+battery_placeholder[0].cells_stat[5].t_min.time: 0
+battery_placeholder[0].cells_stat[1].t_min.time: 0
+battery_placeholder[0].cells_stat[4].u_min.value: 0.0
+battery_placeholder[0].cells_stat[3].t_max.time: 0
+battery_placeholder[0].cells_stat[4].u_min.index: 0
+battery_placeholder[0].soc_update_since: 32768.0
+battery_placeholder[0].cells_stat[3].u_max.value: 0.0
+battery_placeholder[0].cells_stat[5].u_max.index: 0
+battery_placeholder[0].cells_stat[5].t_max.value: 0.0
+battery_placeholder[0].ah_capacity: 0.0
+battery_placeholder[0].bms_software_version: 0
+battery_placeholder[0].cells_stat[4].t_max.index: 0
+battery_placeholder[0].temperature: 0.0
+battery_placeholder[0].cells_stat[2].t_min.index: 0
+battery_placeholder[0].cells_stat[4].t_max.time: 0
+battery_placeholder[0].maximum_charge_voltage: 0.0
+battery_placeholder[0].stack_cycles[0]: 0
+battery_placeholder[0].cells_stat[5].u_max.time: 0
+battery_placeholder[0].cells_stat[3].u_min.value: 0.0
+battery_placeholder[0].cells_stat[2].u_max.time: 0
+battery_placeholder[0].cells_stat[3].t_min.value: 0.0
+battery_placeholder[0].cells_stat[2].t_max.index: 0
+battery_placeholder[0].stack_software_version[4]: 0
+battery_placeholder[0].cells_stat[4].u_min.time: 0
+battery_placeholder[0].cells_stat[5].t_min.index: 0
+battery_placeholder[0].cells_stat[0].t_max.time: 0
+battery_placeholder[0].cells_stat[6].t_max.value: 0.0
+battery_placeholder[0].cells_stat[3].u_min.index: 0
+battery_placeholder[0].cells_stat[0].u_min.index: 0
+battery_placeholder[0].cells_stat[4]:
+battery_placeholder[0].cells_resist[1]:
+battery_placeholder[0].module_sn[2]:
+battery_placeholder[0].cells_stat[0].u_min.value: 0.0
+battery_placeholder[0].min_cell_voltage: 0.0
+battery_placeholder[0].bms_sn:
+battery_placeholder[0].cells_stat[2].u_min.index: 0
+battery_placeholder[0].cells_resist[3]:
+battery_placeholder[0].cells_stat[1].t_min.value: 0.0
+battery_placeholder[0].cells_stat[0].t_min.time: 0
+battery_placeholder[0].cells_stat[6].u_max.time: 0
+battery_placeholder[0].cells_stat[1].u_max.time: 0
+battery_placeholder[0].cells_stat[1].u_max.index: 0
+battery_placeholder[0].cells_stat[6].t_max.time: 0
+battery_placeholder[0].voltage: 0.0
+battery_placeholder[0].cells_stat[5]:
+battery_placeholder[0].cells_stat[3]:
