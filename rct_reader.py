@@ -25,6 +25,8 @@ log = logging.getLogger(__name__)
 # g_sync.p_ac_grid_sum_lp    Total grid power (see Power grid)
 # inv_struct.cosinus_phi cos φ
 #
+# relation of registry ids to the values displayed by app:
+# --> https://rctclient.readthedocs.io/en/latest/inverter_app_mapping.html#
 # https://stackoverflow.com/questions/22827794/reusing-python-bytearray-memoryview
 # ctypes.memmove(ctypes.addressof(self), bytes, fit)
 # copy bytearray: buffer1[:] = buffer2

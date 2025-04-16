@@ -204,16 +204,18 @@ def monitor_inverter(
                             log.info(f'{k}: {v} {units[k]}')
                         log.info('----')
 
-                        if readings and write_api:
-                            point = Point("pv").tag("inverter", "RCT")
+                        if readings:
+                            if write_api:
+                                point = Point("pv").tag("inverter", "RCT")
 
-                            for k, v in short_interval_readings.items():
-                                if k in readings:
-                                    point = point.field(v, readings[k])
-                            point = point.field('power_panel', readings['dc_conv.dc_conv_struct[0].p_dc'] +
-                                                    readings['dc_conv.dc_conv_struct[1].p_dc'])
-                            log.info('writing to InfluxDB')
-                            write_api.write(bucket=bucket, record=point)
+                                for k, v in short_interval_readings.items():
+                                    if k in readings:
+                                        point = point.field(v, readings[k])
+                                point = point.field('power_panel', readings['dc_conv.dc_conv_struct[0].p_dc'] +
+                                                        readings['dc_conv.dc_conv_struct[1].p_dc'])
+                                log.info('writing to InfluxDB')
+                                write_api.write(bucket=bucket, record=point)
+                            connect_retries = 0
                             read_retries = 0
 
                         if start - last_time_long >= interval_long:
@@ -248,16 +250,20 @@ def monitor_inverter(
                     if end - start < interval_short:
                         remaining = (interval_short - (end - start)).total_seconds()
                         time.sleep(remaining)
-                retries = 0
+
                 if reader.server_closed_conn:
                     log.error("Server closed connection, reconnecting in 5s")
                 else:
-                    log.error(f'max retries {retries} exceeded, reconnecting in {5.0 * retries}s')
+                    log.error(f'retrying, attempt number {read_retries}, reconnecting in {5.0 * read_retries}s')
         except Exception as ex:   # pylint: disable=broad-exception-caught
             log.error(f'Error when connecting to inverter: {ex}')
-        time.sleep(5.0 * retries)
-        log.error('reconnecting')
-    raise RuntimeError('Aborting program, too many attempts to connect to connect to inverter.')
+        if read_retries > 0:
+            time.sleep(5.0 * read_retries)
+        else:
+            time.sleep(5.0 * (connect_retries+1))
+        log.error(f'reconnecting, connect retries: {connect_retries}')
+        connect_retries += 1
+    raise RuntimeError('Aborting program, too many attempts to connect to inverter.')
 
 
 def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
