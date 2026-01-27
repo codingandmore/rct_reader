@@ -103,3 +103,36 @@ options:
                         file name of file with captured packages
   -v, --verbose         enable debug logging
 ```
+
+# Autostart
+
+create file for `systemd` to create a service. Edit `/etc/systemd/system/pv-reader.service` with content:
+
+```
+[Unit]
+Description=RCT Photovoltaic Reader
+After=network.target
+
+[Service]
+ExecStart=/home/pi/env/rct/bin/python /home/pi/python-rct/pv_reader.py --host HF-A21.fritz.box --influx-host localhost --influx-port 8086
+
+[Install]
+WantedBy=default.target
+```
+
+Execute commands:
+```shell
+chmod 744 pv_reader.py
+sudo chmod 664 /etc/systemd/system/pv-reader.service
+sudo systemctl daemon-reload
+sudo systemctl enable pv-reader.service
+
+sudo systemctl status pv-reader
+sudo systemctl stop pv-reader
+sudo systemctl restart pv-reader
+```
+
+Read logs:
+default redirection of StandardOutput= to the systemd journal, so you can read the logs with
+`journalctl -u pv-reader.service`.
+

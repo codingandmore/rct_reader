@@ -1,0 +1,2 @@
+rctclient~=0.4.0
+influxdb-client~=1.50.0
