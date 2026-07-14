@@ -260,10 +260,10 @@ def monitor_inverter(
         if read_retries > 0:
             time.sleep(5.0 * read_retries)
         else:
-            time.sleep(5.0 * (connect_retries+1))
+            time.sleep(10.0 * (connect_retries+1))
         log.error(f'reconnecting, connect retries: {connect_retries}')
         connect_retries += 1
-    raise RuntimeError('Aborting program, too many attempts to connect to inverter.')
+    log.error('Too many attempts to connect to inverter.')
 
 
 def read_all_values(rct_inverter_host: str, rct_inverter_port: str = '8899'):
