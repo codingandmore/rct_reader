@@ -1,2 +1,2 @@
-rctclient~=0.4.0
+rctclient~=0.0.4
 influxdb-client~=1.50.0
